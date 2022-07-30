@@ -1,0 +1,7 @@
+1. Build database
+    a. tables for patient info
+        1) different table for different datatypes
+    b. table for template
+        1) Pages - Page can be static data (DOB, name) or serial dynamic (Blood pressure, HPI)
+2. Interface for making template
+3. Display template
