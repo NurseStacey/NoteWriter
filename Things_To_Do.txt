@@ -2,6 +2,40 @@
     a. tables for patient info
         1) different table for different datatypes
     b. table for template
-        1) Pages - Page can be static data (DOB, name) or serial dynamic (Blood pressure, HPI)
+        1) Pages - Page can be static data (DOB, name) or serial dynamic (Blood pressure, HPI) 
+        2) Adding fields - datatype, name, size of input field, location on page
+    c. tables for patient data
+        1) one table per datatype?
+        2) Fields - note, value, field name, crossed_out
+    d. table for clinic
+        1) clinic name, address, phone number, fax, NPI
+        2) clinics can have multiple locations
+        3) each clinic location has it's own providers
+
+            
 2. Interface for making template
+    a. Create an interface
+        1)Name of interface
+        2)Choose fields and give a label
+        3)Assign an order
+    b. Store data for an interface in a table
+        1)column 1 - Interface name
+        2)column 2 - table name for fields
+        3)column 3 - fields
+        4)column 4 - order
+    c. Use above data to also create table for storing the data
+
 3. Display template
+    a. Q - use Canvas
+    b. Tab through
+    c. need hot keys
+        1) Cycle through patient values
+        2) Cycle through system values
+        3) Bring up last note and cycle
+        4) Display current note preview
+    d. Side panel for viewing past notes
+4. Create final soap note   
+    a. Need a template langauge
+    b. Simple coding system for importing data
+
+

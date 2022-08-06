@@ -32,6 +32,22 @@ class MyDatabaseClass():
         mycursor = self.get_cursor()
         mycursor.execute(_SQL)
 
+    def add_new_interface(self,interface_name, table_name, all_fields):
+
+        field_data = []
+        for one_field in all_fields:
+            field_data.append((interface_name, 
+                            table_name,
+                            one_field.name,
+                            one_field.label,
+                            int(one_field.order)))
+        
+        _SQL = "INSERT INTO interfaces (Interface_Name, Table_Name, Field_Name, Field_Lable, Field_Order) VALUES (%s, %s, %s, %s, %s)"
+
+        mycursor = self.get_cursor()
+        mycursor.executemany(_SQL, field_data)
+        self.the_db.commit()
+
     def add_new_table(self, table_name, all_fields):
 
         query_string = 'CREATE TABLE ' + table_name + ' ('       

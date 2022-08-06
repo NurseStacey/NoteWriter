@@ -471,16 +471,17 @@ class MyEntry(tk.Entry):
 
         kwargs['font'] = font_return(font_size)
 
-        if kwargs['validation_type'] == 'DB_string':
-            validation_field = top_level.register(self.MySQL_Field_Name)
-            kwargs['validate'] = 'key'
-            kwargs['validatecommand'] = (validation_field, '%S')
-            del kwargs['validation_type']
-        elif kwargs['validation_type'] == 'digit_only':
-            validation_field = top_level.register(self.only_numbers)
-            kwargs['validate'] = 'key'
-            kwargs['validatecommand'] = (validation_field, '%S')
-            del kwargs['validation_type']
+        if 'validation_type' in kwargs:
+            if kwargs['validation_type'] == 'DB_string':
+                validation_field = top_level.register(self.MySQL_Field_Name)
+                kwargs['validate'] = 'key'
+                kwargs['validatecommand'] = (validation_field, '%S')
+                del kwargs['validation_type']
+            elif kwargs['validation_type'] == 'digit_only':
+                validation_field = top_level.register(self.only_numbers)
+                kwargs['validate'] = 'key'
+                kwargs['validatecommand'] = (validation_field, '%S')
+                del kwargs['validation_type']
 
 
         super().__init__(*args, **kwargs)   
@@ -497,3 +498,46 @@ class MyEntry(tk.Entry):
     def MySQL_Field_Name(self, char):
             #doesn't seem like the right work around
         return (char in self.allowed_charactors or len(char)>1) 
+
+class MyFrame(tk.Frame):
+    def __init__(self, *args, **kwargs):
+        title_text = ''
+        if 'title_text' in kwargs:
+            title_text = kwargs['title_text']
+            del kwargs['title_text']
+
+        super().__init__(*args, **kwargs)
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(2, weight=1)       
+    
+        self.title_frame = tk.Frame(self)
+        self.title_frame.grid(row=0, column=1, pady=10, sticky='news')
+        self.title_frame.grid_columnconfigure(0, weight=1)
+        self.title_frame.grid_columnconfigure(2, weight=1)
+        MyLabel(36, self.winfo_toplevel(),  self.title_frame,
+                text=title_text).grid(row=0, column=1)
+
+        self.input_frame = tk.Frame(
+            self)
+        self.input_frame.grid(row=1, column=1, pady=30, sticky='news')
+        self.input_frame.grid_columnconfigure(0, weight=1)
+        
+
+        self.button_frame = tk.Frame(
+            self)
+#, highlightbackground="blue", highlightthickness=2
+        self.button_frame.grid(row=3, column=1, pady=10, sticky='news')
+        self.button_frame.grid_columnconfigure(0, weight=1)
+
+    def set_input_frame_columns(self, num_columns):
+        self.input_frame.grid_columnconfigure(num_columns+1, weight=1)
+
+    def set_button_frame_columns(self, num_columns):
+        self.button_frame.grid_columnconfigure(num_columns+1, weight=1)
+
+    def raise_frame(self, which_frame):
+        self.winfo_toplevel().nametowidget(which_frame).tkraise()
+
+    def Cancel(self):
+        self.lower()
