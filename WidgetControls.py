@@ -13,8 +13,8 @@ class ListScrollCombo(tk.Frame):
     # ensure a consistent GUI size
         self.grid_propagate(False)
     # implement stretchability
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        # self.grid_rowconfigure(0, weight=1)
+        # self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(4, weight=1)
 
@@ -28,13 +28,18 @@ class ListScrollCombo(tk.Frame):
     # create a list widget
         self.listbox = tk.Listbox(self, takefocus=False, name='list_box',
                                   width=this_width, font=this_font, height=this_height, exportselection=0)
-        self.listbox.grid(row=1, column=2, rowspan=3,sticky="nsew")
+        self.listbox.grid(row=1, column=2, rowspan=3,sticky="ne")
 
     # create a Scrollbar and associate it with txt
         scrollb = ttk.Scrollbar(self,  takefocus=False,
                                 command=self.listbox.yview)
         scrollb.grid(row=1, column=3, rowspan=3, sticky='ns')
         self.listbox['yscrollcommand'] = scrollb.set
+
+        self.config(width=(self.listbox.winfo_reqwidth()+scrollb.winfo_reqwidth()), height=(self.listbox.winfo_reqheight()+scrollb.winfo_reqheight()))
+
+    def list_box_bind(self, function):
+        self.listbox.bind('<Double-1>', function)
 
     def jump(self, direction):
         self.listbox.yview_scroll(direction, "pages")
@@ -69,6 +74,9 @@ class ListScrollCombo(tk.Frame):
 
     def getselections(self):
         return self.listbox.curselection()
+
+    def set_selection(self, index):
+        self.listbox.selection_set(index)
 
     def set_selected_items(self, item_list):
 
@@ -453,44 +461,64 @@ class MyMultiListBox(tk.Frame):
             this_list_box.selection_clear(0, tk.END)
 
 class MyButton(tk.Button):
-    def __init__(self, font_size, top_level, *args, **kwargs):
+    def __init__(self, font_size,  *args, **kwargs):
 
         kwargs['font'] = font_return(font_size)
 
         super().__init__(*args, **kwargs)  
             
 class MyLabel(tk.Label):
-    def __init__(self, font_size, top_level, *args, **kwargs):
+    def __init__(self, font_size,  *args, **kwargs):
 
         kwargs['font'] = font_return(font_size)
 
         super().__init__(*args, **kwargs)  
 
-class MyEntry(tk.Entry):
-    def __init__(self, font_size, top_level, *args, **kwargs):
+#class MyEntry(tk.Entry):
+class MyEntry(tk.Frame):    
+    def __init__(self, font_size, *args, **kwargs):
 
-        kwargs['font'] = font_return(font_size)
-
+        validation_field_function=None
         if 'validation_type' in kwargs:
             if kwargs['validation_type'] == 'DB_string':
-                validation_field = top_level.register(self.MySQL_Field_Name)
-                kwargs['validate'] = 'key'
-                kwargs['validatecommand'] = (validation_field, '%S')
-                del kwargs['validation_type']
+                validation_field_function = self.MySQL_Field_Name
+                
             elif kwargs['validation_type'] == 'digit_only':
-                validation_field = top_level.register(self.only_numbers)
-                kwargs['validate'] = 'key'
-                kwargs['validatecommand'] = (validation_field, '%S')
-                del kwargs['validation_type']
+                validation_field_function = self.only_numbers           
+            del kwargs['validation_type']
 
+       
 
-        super().__init__(*args, **kwargs)   
+        super().__init__(*args, **kwargs)
+
+        validation_field = self.register(validation_field_function)
+        kwargs['validate']='key'
+        kwargs['font'] = font_return(font_size)
+        kwargs['validatecommand']=(validation_field,'%S')
+
+        self.Entry_Box = tk.Entry(self, **kwargs)
+        self.Entry_Box.grid(row=0, column=0)
 
         
         self.allowed_charactors = [chr(i+ord('a')) for i in range(26)] +\
             [chr(i+ord('A')) for i in range(26)] +\
                 ['_'] +\
             [chr(i+ord('0')) for i in range(10)]
+
+    def get(self):
+
+        return self.Entry_Box.get() 
+    
+    def delete(self, *args):
+
+        self.Entry_Box.delete(*args)
+    
+    def set_state(self, this_state):
+        self.config(state=this_state)
+
+    def insert(self, *args):
+
+        self.Entry_Box.insert(*args)
 
     def only_numbers(self, char):
         return char.isdigit()
@@ -515,7 +543,7 @@ class MyFrame(tk.Frame):
         self.title_frame.grid(row=0, column=1, pady=10, sticky='news')
         self.title_frame.grid_columnconfigure(0, weight=1)
         self.title_frame.grid_columnconfigure(2, weight=1)
-        MyLabel(36, self.winfo_toplevel(),  self.title_frame,
+        MyLabel(36, self.title_frame,
                 text=title_text).grid(row=0, column=1)
 
         self.input_frame = tk.Frame(
@@ -541,3 +569,81 @@ class MyFrame(tk.Frame):
 
     def Cancel(self):
         self.lower()
+
+class MyDropDownBox(tk.Frame):
+    def __init__(self, font_size, *args, **kwargs):
+#, highlightbackground="blue", highlightthickness=2
+
+        super().__init__(*args, **kwargs)
+
+        self.entry_box = tk.Entry(self, font=font_return(
+            font_size), width=20, validate='focusout', validatecommand=(self.register(self.leave_widget),'%P'))
+        self.entry_box.grid(row=0, column=0, sticky='W')
+        self.entry_box.bind('<KeyRelease>', self.key_pressed)
+        self.list_box = ListScrollCombo(False, 5, 18, font_return(
+            font_size), self)
+
+        self.list_box.grid(row=1,column=0)
+
+        self.list_box_items = []
+        self.list_box.list_box_bind(self.list_box_selected)
+        self.grid_rowconfigure(2,weight=1)
+
+        self.current_selection = -1
+
+    def add_item(self, item):
+        self.list_box_items.append(item.lower())
+        self.list_box.add_item(item)
+
+    def add_item_list(self, item_list):
+        for one_item in item_list:
+            self.list_box_items.append(one_item.lower())
+            self.list_box.add_item(one_item)
+
+    def list_box_selected(self,e):
+        new_text = self.list_box.get_selected_text()
+        self.entry_box.delete(0, tk.END)
+        self.entry_box.insert(0, new_text[0])
+
+    def leave_widget(self, value):
+        self.entry_box.delete(0, tk.END)
+        self.entry_box.insert(0,self.list_box.get_selected_text()[0])      
+        return True  
+
+    def key_pressed(self, e):
+        
+        current_text = self.entry_box.get().lower()
+
+        if e.keycode == 40:
+            self.current_selection += 1
+            self.list_box.selection_clear()
+            self.list_box.set_selection(self.current_selection)
+            return
+        
+        if e.keycode == 38:
+            self.current_selection -= 1
+            self.list_box.selection_clear()
+            self.list_box.set_selection(self.current_selection)
+            return
+
+        self.list_box.clear_listbox()
+            
+
+        for x in self.list_box_items:
+            if x[:len(current_text)].lower() == current_text:
+                self.list_box.add_item(x)
+
+        self.current_selection = 0
+        self.list_box.selection_clear()
+        self.list_box.set_selection(self.current_selection)
+
+    def get_selection(self):
+
+        return self.list_box.get_selected_text()
+
+class MyCheckBox(tk.Checkbutton):
+    def __init__(self, font_size, top_level, *args, **kwargs):
+
+        kwargs['font'] = font_return(font_size)
+
+        super().__init__(*args, **kwargs)

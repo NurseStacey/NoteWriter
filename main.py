@@ -2,8 +2,10 @@
 import tkinter as tk
 from HomeScreen import HomeScreen_DLG_Class
 from Database_Class_File import MyDatabaseClass
-from Database_Admin import Database_Admin_DLG_Class, New_Database_Table_DLG_Class, Alter_Database_Table_DLG_Class, New_Interface_DLG_Class
+from Database_Admin import *
 from Clinic_Admin import New_Clinic_DLG_Class
+from Interface_Admin import *
+from Interface_DLG import *
 
 The_Window = tk.Tk()
 The_Window.title('My EHR program')
@@ -32,8 +34,20 @@ Alter_Database_Table_DLG_Class(Database_Obj,
 New_Clinic_DLG_Class(Database_Obj,
                      The_Window, title_text='Create Clinic', name='new_clinic').grid(row=1, column=1, sticky='news')
 
+Interface_Admin_DLG_Class(Database_Obj,
+                          The_Window, title_text='Interface Management', name='interface_admin').grid(row=1, column=1, sticky='news')
+
 New_Interface_DLG_Class(Database_Obj,
                      The_Window, title_text='Create New Interface', name='new_interface').grid(row=1, column=1, sticky='news')
+
+Alter_Interface_DLG_Class(Database_Obj,
+                          The_Window, title_text='Alter Interface', name='alter_interface').grid(row=1, column=1, sticky='news')
+
+Interface_Select_DLG_Class(Database_Obj,
+                          The_Window, title_text='Select Interface', name='select_interface').grid(row=1, column=1, sticky='news')
+
+InterfaceDLG_Class(Database_Obj,
+                           The_Window, title_text='', name='interface_dlg').grid(row=1, column=1, sticky='news')
 
 The_Window.nametowidget('homescreen').tkraise()
 
