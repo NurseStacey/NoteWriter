@@ -10,10 +10,6 @@ class FieldClass:
     type:str
     length:int
 
-
-
-
-
 class Database_Admin_DLG_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):
 
@@ -27,8 +23,8 @@ class Database_Admin_DLG_Class(MyFrame):
         MyButton(font_size,  self.button_frame, command=self.alter_table, text='Alter\nTable', height=3, width=10).grid(row=2,  padx=5, column=2)
         MyButton(font_size,  self.button_frame, text='Cancel', height=3, width=10, command=self.Cancel).grid(row=2, column=3, padx=5)
 
-        ListScrollCombo(False, 10, 25, font_return(16), self.button_frame,
-                        name='table_list_box').grid(row=1, column=1, pady=30, rowspan=2)
+        ListScrollComboTwo(10, 20, 25, None, self.button_frame,
+                           name='table_list_box').grid(row=1, column=1, pady=30, sticky='NW', rowspan=2)
         # self.button_frame.nametowidget(
         #     'table_list_box').config(width=350, height=450)
         
@@ -78,10 +74,7 @@ class Database_Admin_DLG_Class(MyFrame):
             return
 
         table_list_box = self.button_frame.nametowidget('table_list_box')
-        table_list_box.clear_listbox()
-
-        for one_table in table_list:
-            table_list_box.add_item(one_table)
+        table_list_box.add_item_list(table_list)
 
     def new_table(self):
         self.raise_frame('new_table')
@@ -95,11 +88,14 @@ class New_Database_Table_DLG_Class(MyFrame):
         super().__init__(*args, **kwargs)
         ####################
 
-        def type_chosen(event):
+        def type_chosen(e):
 
-            if self.field_type_value.get() in ['string']:
+            if self.input_frame.nametowidget(
+                    'field_type').get_selected_text() in ['string']:
                 self.input_frame.nametowidget(
                     'field_length').set_state('normal')
+                self.input_frame.nametowidget(
+                    'field_length').focus_set()
             else:
                 self.input_frame.nametowidget(
                     'field_length').set_state('disabled')
@@ -108,46 +104,38 @@ class New_Database_Table_DLG_Class(MyFrame):
         self.Table_Name = '' 
 
         font_size = 24
-        MyLabel(font_size, self.input_frame, text='Table Name').grid(row=0, column=0, pady=20)
+        MyLabel(font_size, self.input_frame, text='Table Name').grid(
+            row=0, column=0, pady=(0, 10))
         
-        MyEntry(font_size, self.input_frame, name='table_name', validation_type='DB_string').grid(row=0, column=1, columnspan=2, pady=20)
+        MyEntry(font_size, self.input_frame, name='table_name', validation_type='DB_string').grid(
+            row=0, column=1, columnspan=2, pady=(0, 10))
 
-        MyLabel(font_size,   self.input_frame, text='Field Name').grid(row=1, column=0, pady=20)
+        MyLabel(font_size,   self.input_frame, text='Field Name').grid(row=1, column=0)
 
-        MyLabel(font_size,  self.input_frame, text='Field Type').grid(row=1, column=1, pady=20)
+        MyLabel(font_size,  self.input_frame, text='Field Type').grid(row=1, column=1)
 
-        MyLabel(font_size,   self.input_frame, text='Field\nLength').grid(row=1, column=2, pady=20)
+        MyLabel(font_size,   self.input_frame, text='Field\nLength').grid(row=1, column=2)
 
         MyEntry(font_size,  self.input_frame, name='field_name',
-                validation_type='DB_string').grid(row=2, column=0, pady=20)
+                validation_type='DB_string').grid(sticky='n', row=2, column=0, pady=(0, 10))
 
-        field_types = [
-            "string",
-            "text",
-            "integer",
-            "double",
-            "date",
-        ]
+        # MyDropDownBox(font_size, type_chosen, self.input_frame,
+        #               name='field_type').grid(sticky='n', row=2, column=1, pady=(0, 10))
 
-        self.field_type_value = tk.StringVar()
+        ListScrollComboTwo(5, 20, 20, type_chosen, self.input_frame, name='field_type').grid(
+            sticky='n', row=2, column=1, pady=(0, 10))
 
-        self.field_type_value.set('string')
 
-        field_menu = tk.OptionMenu(
-            self.input_frame, self.field_type_value, *field_types, command=type_chosen)
-        field_menu.grid(row=2, column=1, pady=20)
-        field_menu.config(font=font_return(font_size))
- 
-        self.input_frame.nametowidget(
-            field_menu.menuname).config(font=font_return(font_size))
+        self.input_frame.nametowidget('field_type').add_item_list(field_types)
 
         MyEntry(font_size,  self.input_frame, name='field_length',
-                validation_type='digit_only').grid(row=2, column=2, pady=20)
+                validation_type='digit_only').grid(sticky='n', row=2, column=2, pady=(0, 10))
 
         headers = ['name', 'type', 'length']
-        self.FieldList = MyMultiListBox(FieldClass, headers, False, self)
+        self.FieldList = MyMultiListBox(
+            FieldClass, headers, False, self.input_frame)
         self.FieldList.set_font_size(16)
-        self.FieldList.grid(row=2, column=1, columnspan=3, pady=20, sticky='news')
+        self.FieldList.grid(row=3, column=0, columnspan=3, sticky='news')
         self.FieldList.set_height(5)
         self.set_input_frame_columns(2)
 
@@ -172,7 +160,8 @@ class New_Database_Table_DLG_Class(MyFrame):
             messagebox.showerror('error', 'That field name already used')
             return
 
-        field_type=self.field_type_value.get()
+        field_type = self.input_frame.nametowidget(
+            'field_type').get_selected_text()
         field_length=self.input_frame.nametowidget('field_length').get()
         if field_type=='string' and field_length=='':
             messagebox.showerror('error', 'For strings we need a length')
@@ -184,11 +173,11 @@ class New_Database_Table_DLG_Class(MyFrame):
             field_length
         )
         
-        self.field_type_value.set('string')
+        
         self.input_frame.nametowidget('field_length').delete(0, tk.END)
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         self.input_frame.nametowidget('field_length').set_state('normal')
-        
+        self.input_frame.nametowidget('field_type').reset()
         self.FieldList.add_one_record(this_field)
 
 
@@ -218,7 +207,7 @@ class New_Database_Table_DLG_Class(MyFrame):
         self.FieldList.clear_list_boxes()
 
         self.input_frame.nametowidget('table_name').delete(0,tk.END)
-        self.field_type_value.set('string')
+        
         self.input_frame.nametowidget('field_length').delete(0, tk.END)
         self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)

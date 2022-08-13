@@ -8,6 +8,15 @@ class HomeScreen_DLG_Class(MyFrame):
 
         super().__init__(*args, **kwargs)
 
+        temp_listbox = ListScrollComboTwo(5, 20, 20, self.input_frame)
+        temp_listbox.grid(row=1, column=1)
+        fruit_list = []
+        with open('fruit.txt', 'r') as this_file:
+            for one_line in this_file.readlines():
+                fruit_list.append(one_line.replace('\n',''))
+
+        temp_listbox.add_item_list(fruit_list)
+
         MyButton(24, self.button_frame, command=self.new_clinic, text='New\nClinic', height=3, width=10).grid(row=1,  padx=5, column=1)
         MyButton(24,  self.button_frame, command=self.clinic_admin, text='Clinic\nAdmin',  height=3, width=10).grid(row=1, padx=5,column=2)
         MyButton(24, self.button_frame, command=self.provider_admin, text='Provider\nAdmin', height=3, width=10).grid(row=1,  padx=5, column=3)

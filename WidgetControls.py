@@ -15,7 +15,7 @@ class ListScrollCombo(tk.Frame):
     # implement stretchability
         # self.grid_rowconfigure(0, weight=1)
         # self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(5, weight=1)
         self.grid_columnconfigure(4, weight=1)
 
         if show_forward_backward_buttons:
@@ -37,6 +37,9 @@ class ListScrollCombo(tk.Frame):
         self.listbox['yscrollcommand'] = scrollb.set
 
         self.config(width=(self.listbox.winfo_reqwidth()+scrollb.winfo_reqwidth()), height=(self.listbox.winfo_reqheight()+scrollb.winfo_reqheight()))
+
+    def do_nothing(self, event):
+        return True
 
     def list_box_bind(self, function):
         self.listbox.bind('<Double-1>', function)
@@ -293,6 +296,9 @@ class MyMultiListBox(tk.Frame):
 
     def listboxclicked(self, event=None):
 
+        if len(event.widget.curselection()[0])==0:
+            return
+
         which = event.widget.curselection()[0]
         for temp in self.list_boxes:
             temp.select_clear(0, tk.END)
@@ -370,6 +376,11 @@ class MyMultiListBox(tk.Frame):
                     if isinstance(value, datetime.date):
                         text = value.strftime('%m/%d/%Y')
                         temp.insert(tk.END, text)
+                    elif isinstance(value, bool):
+                        if value:
+                            temp.inser(tk.END,'Yes')
+                        else:
+                            temp.inser(tk.END,'No')
                     else:
                         temp.insert(tk.END, value)
 
@@ -478,7 +489,7 @@ class MyLabel(tk.Label):
 class MyEntry(tk.Frame):    
     def __init__(self, font_size, *args, **kwargs):
 
-        validation_field_function=None
+        validation_field_function=self.do_nothing
         if 'validation_type' in kwargs:
             if kwargs['validation_type'] == 'DB_string':
                 validation_field_function = self.MySQL_Field_Name
@@ -514,7 +525,7 @@ class MyEntry(tk.Frame):
         self.Entry_Box.delete(*args)
     
     def set_state(self, this_state):
-        self.config(state=this_state)
+        self.Entry_Box.config(state=this_state)
 
     def insert(self, *args):
 
@@ -527,6 +538,9 @@ class MyEntry(tk.Frame):
             #doesn't seem like the right work around
         return (char in self.allowed_charactors or len(char)>1) 
 
+    def do_nothing(self, char):
+        return True
+
 class MyFrame(tk.Frame):
     def __init__(self, *args, **kwargs):
         title_text = ''
@@ -536,6 +550,7 @@ class MyFrame(tk.Frame):
 
         super().__init__(*args, **kwargs)
 
+
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)       
     
@@ -543,7 +558,7 @@ class MyFrame(tk.Frame):
         self.title_frame.grid(row=0, column=1, pady=10, sticky='news')
         self.title_frame.grid_columnconfigure(0, weight=1)
         self.title_frame.grid_columnconfigure(2, weight=1)
-        MyLabel(36, self.title_frame,
+        MyLabel(36, self.title_frame, name='title',
                 text=title_text).grid(row=0, column=1)
 
         self.input_frame = tk.Frame(
@@ -558,6 +573,10 @@ class MyFrame(tk.Frame):
         self.button_frame.grid(row=3, column=1, pady=10, sticky='news')
         self.button_frame.grid_columnconfigure(0, weight=1)
 
+    def set_title(self, title):
+
+        self.title_frame.nametowidget('title').config(text=title)
+        
     def set_input_frame_columns(self, num_columns):
         self.input_frame.grid_columnconfigure(num_columns+1, weight=1)
 
@@ -571,13 +590,18 @@ class MyFrame(tk.Frame):
         self.lower()
 
 class MyDropDownBox(tk.Frame):
-    def __init__(self, font_size, *args, **kwargs):
+    def __init__(self, font_size, function_on_leave, *args, **kwargs):
 #, highlightbackground="blue", highlightthickness=2
+
+        # kwargs['validatecommand'] = (self.register(self.leave_widget), '%P')
+        # kwargs['validate'] = 'focusout'
 
         super().__init__(*args, **kwargs)
 
+
         self.entry_box = tk.Entry(self, font=font_return(
             font_size), width=20, validate='focusout', validatecommand=(self.register(self.leave_widget),'%P'))
+
         self.entry_box.grid(row=0, column=0, sticky='W')
         self.entry_box.bind('<KeyRelease>', self.key_pressed)
         self.list_box = ListScrollCombo(False, 5, 18, font_return(
@@ -590,6 +614,7 @@ class MyDropDownBox(tk.Frame):
         self.grid_rowconfigure(2,weight=1)
 
         self.current_selection = -1
+        self.function_on_leave = function_on_leave
 
     def add_item(self, item):
         self.list_box_items.append(item.lower())
@@ -604,11 +629,19 @@ class MyDropDownBox(tk.Frame):
         new_text = self.list_box.get_selected_text()
         self.entry_box.delete(0, tk.END)
         self.entry_box.insert(0, new_text[0])
+        self.entry_box.focus_set()
 
     def leave_widget(self, value):
         self.entry_box.delete(0, tk.END)
-        self.entry_box.insert(0,self.list_box.get_selected_text()[0])      
+        self.entry_box.insert(0,self.get_selection())   
+        if not self.function_on_leave==None:
+            self.function_on_leave()
+
         return True  
+
+    def set_state(self, this_state):
+        self.entry_box.config(state=this_state)
+        self.list_box.set_state(this_state)
 
     def key_pressed(self, e):
         
@@ -625,12 +658,18 @@ class MyDropDownBox(tk.Frame):
             self.list_box.selection_clear()
             self.list_box.set_selection(self.current_selection)
             return
-
-        self.list_box.clear_listbox()
             
+        self.add_list_box_items(current_text)
 
+    def clear_box(self):
+        self.entry_box.delete(0,tk.END)
+        self.add_list_box_items('')
+        self.list_box.selection_clear()
+
+    def add_list_box_items(self, text):
+        self.list_box.clear_listbox()
         for x in self.list_box_items:
-            if x[:len(current_text)].lower() == current_text:
+            if x[:len(text)].lower() == text:
                 self.list_box.add_item(x)
 
         self.current_selection = 0
@@ -639,11 +678,108 @@ class MyDropDownBox(tk.Frame):
 
     def get_selection(self):
 
-        return self.list_box.get_selected_text()
+        if len(self.list_box.get_selected_text())==0:
+            return ''
+
+        return self.list_box.get_selected_text()[0]
 
 class MyCheckBox(tk.Checkbutton):
-    def __init__(self, font_size, top_level, *args, **kwargs):
-
-        kwargs['font'] = font_return(font_size)
+    def __init__(self,  *args, **kwargs):
 
         super().__init__(*args, **kwargs)
+
+
+class ListScrollComboTwo(tk.Frame):
+    def __init__(self, this_height, this_width, this_font, leave_function, *args, **kwargs):
+
+
+        super().__init__(*args, **kwargs)
+
+        self.listbox = tk.Listbox(self, name='list_box', selectmode='single',
+                                  width=this_width, font=this_font, height=this_height)
+
+        self.listbox.bind('<KeyRelease>', self.key_pressed)
+
+        if not leave_function==None:
+            self.listbox.bind('<FocusOut>', leave_function)
+
+        self.listbox.grid(row=1, column=1, sticky="ne")
+
+    # create a Scrollbar and associate it with txt
+        scrollb = ttk.Scrollbar(self, command=self.listbox.yview)
+        scrollb.grid(row=1, column=2, sticky='ns')
+        self.listbox['yscrollcommand'] = scrollb.set
+        
+        self.list_box_items = []
+        self.the_text=''
+        self.current_selection = 0
+
+    def add_item_list(self, item_list):
+        self.clear_listbox()
+
+        for one_item in item_list:
+            self.list_box_items.append(one_item.lower())
+            self.listbox.insert(tk.END, one_item)
+
+    def get_selected_text(self):
+
+        selections = self.listbox.curselection()
+        if len(selections)==0:
+            return ''
+
+        return self.listbox.get(selections[0])
+
+    def update_displayed_list(self):
+
+        self.listbox.delete(0, tk.END)
+        for x in self.list_box_items:
+            if x[:len(self.the_text)].lower() == self.the_text:
+                self.listbox.insert(tk.END,  x)
+
+        
+        self.listbox.selection_clear(0, tk.END)
+        self.listbox.selection_set(0)
+
+    def set_selection_mode(self, which):
+        self.listbox.config(selectmode=which)
+
+    def reset(self):
+        self.the_text=''
+        self.update_displayed_list()
+
+    def key_pressed(self, e):
+
+        if len(self.listbox.curselection())==0:
+            current_selection=0
+        else:
+            current_selection = self.listbox.curselection()[0]
+
+        if e.keycode == 40 and current_selection < self.listbox.size():
+            current_selection += 1
+            self.listbox.selection_clear(0, tk.END)
+            self.listbox.selection_set(current_selection)
+            return
+
+        if e.keycode == 38 and current_selection > 0:
+            current_selection -= 1
+            self.listbox.selection_clear(0, tk.END)
+            self.listbox.selection_set(current_selection)
+            return
+
+        if e.char.isalpha():
+            self.the_text += e.char
+        elif e.keycode==8:
+            self.the_text = self.the_text[:max(0,len(self.the_text)-1)]
+
+        self.update_displayed_list()
+
+    def clear_listbox(self):
+        self.listbox.delete(0, tk.END)
+
+    def remove_item(self, text):
+
+        ID = self.listbox.get(0, tk.END).index(text)
+        self.listbox.delete(ID)
+        
+    def set_state(self, this_state):
+        self.listbox.configure(state=this_state)

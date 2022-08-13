@@ -49,6 +49,9 @@ Interface_Select_DLG_Class(Database_Obj,
 InterfaceDLG_Class(Database_Obj,
                            The_Window, title_text='', name='interface_dlg').grid(row=1, column=1, sticky='news')
 
+InterfaceDLG_DoWhat_Class(Database_Obj,
+                          The_Window, title_text='', name='interface_dlg').grid(row=1, column=1, sticky='news')
+
 The_Window.nametowidget('homescreen').tkraise()
 
 The_Window.mainloop()

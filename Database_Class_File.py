@@ -108,9 +108,11 @@ class MyDatabaseClass():
                             one_field.label,
                             int(one_field.order),
                             one_field.type,
-                            int(one_field.length)))
+                            int(one_field.length),
+                               one_field.linked_table,
+                               one_field.immutable=='Yes'))
         
-        _SQL = "INSERT INTO interfaces (Interface_Name, Table_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Field_Length) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        _SQL = "INSERT INTO interfaces (Interface_Name, Table_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Field_Length, Linked_Table, Immutable) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
         try:
             mycursor = self.get_cursor()
@@ -125,13 +127,13 @@ class MyDatabaseClass():
 
     def add_new_table(self, table_name, all_fields):
 
-        _SQL = 'CREATE TABLE ' + table_name + ' ('       
+        _SQL = 'CREATE TABLE ' + table_name + ' (Record_ID int NOT NULL AUTO_INCREMENT, '       
 
         for one_field in all_fields:
             _SQL += self.one_new_field_query_string(one_field)
 
-        _SQL = _SQL[0:len(_SQL)-2]
-        _SQL += ')'
+        #_SQL = _SQL[0:len(_SQL)-2]
+        _SQL += 'PRIMARY KEY (Record_ID))'
         try:
             mycursor = self.get_cursor()
             mycursor.execute(_SQL)
@@ -161,6 +163,9 @@ class MyDatabaseClass():
         elif one_field.type == 'date':
             _SQL += one_field.name
             _SQL += ' DATETIME, '
+        elif one_field.type == 'bool':
+            _SQL += one_field.name
+            _SQL += ' BOOL, '
 
         return _SQL
 
