@@ -75,6 +75,7 @@ class ListScrollCombo(tk.Frame):
 
         return return_value
 
+
     def getselections(self):
         return self.listbox.curselection()
 
@@ -235,7 +236,7 @@ class MyMultiListBox(tk.Frame):
                                name=headers[x], exportselection=False, yscrollcommand=self.listboxscroll)  # need to add a command for scrolling)
             temp.config(yscrollcommand=self.listboxscroll)
             temp.bind('<<ListboxSelect>>', self.listboxclicked)
-            temp.bind('<Double-Button-1>', self.listboxdoubleclicked)
+            
             
             temp.grid(row=this_row+1, column=x+1, sticky='news')
 
@@ -251,6 +252,24 @@ class MyMultiListBox(tk.Frame):
 
         self.grid_rowconfigure(2, weight=1)
         self.grid_columnconfigure(4, weight=1)
+
+        self.single_click=None
+
+    def set_single_click(self, function):
+        self.single_click = function
+
+    def get_selection(self):
+
+        return self.list_boxes[0].curselection()
+
+    def set_state(self, the_state):
+        for one_box in self.list_boxes:
+            one_box.config(state=the_state)
+
+    def set_double_click(self,function):
+
+        for one_listbox in self.list_boxes:
+            one_listbox.bind('<Double-Button-1>', function)
 
     def set_height(self, this_height):
         for one_list_box in self.list_boxes:
@@ -275,6 +294,16 @@ class MyMultiListBox(tk.Frame):
     def get_current_selection_first(self, which):
         return self.listboxframe.nametowidget(which).get(self.listboxframe.nametowidget(which).curselection()[0])
 
+    def get_current_selection(self):
+        return_value = []
+        field_names = []
+
+        for one_box in self.list_boxes:
+            return_value.append(one_box.get(one_box.curselection()[0]))
+            field_names.append(one_box._name)
+
+        return dict(zip(field_names,return_value))
+
     def get_current_selection_all(self, which):
         selection_list = self.listboxframe.nametowidget(which).curselection()
 
@@ -289,20 +318,23 @@ class MyMultiListBox(tk.Frame):
 
         this_button['text'] = newbuttontext
 
-    def listboxdoubleclicked(self, event=None):
-        which = event.widget.curselection()[0]
+    def delete_one_item(self, which):
+
         for temp in self.list_boxes:
             temp.delete(which)
 
     def listboxclicked(self, event=None):
 
-        if len(event.widget.curselection()[0])==0:
+        if len(event.widget.curselection())==0:
             return
 
         which = event.widget.curselection()[0]
         for temp in self.list_boxes:
             temp.select_clear(0, tk.END)
             temp.select_set(which)
+
+        if not self.single_click==None:
+            self.single_click()
 
     #if you are to allow multiple lines to be selected
     def listboxclicked_multi(self, event=None):
@@ -348,6 +380,12 @@ class MyMultiListBox(tk.Frame):
     def value_in_list(self, which, value):
         return (value in self.listboxframe.nametowidget(which).get(0, tk.END))
 
+    def get_index(self, which, value):
+        return self.listboxframe.nametowidget(which).index(0, tk.END)
+
+    def get_one_value_in_list(self, which, record):
+        return (self.listboxframe.nametowidget(which).index(record))
+
     def get_all_records(self):
 
         return_value = []
@@ -364,6 +402,10 @@ class MyMultiListBox(tk.Frame):
                 self.listboxframe.nametowidget(attribute.name).get(which))
 
         return self.record_class(*this_record)
+
+    def delete_one_record(self,which,value):
+        index = self.listboxframe.nametowidget(which).get(0, tk.END).index(value)
+        self.delete_one_item(index)
 
     def add_one_record(self, record):
 
@@ -542,12 +584,13 @@ class MyEntry(tk.Frame):
         return True
 
 class MyFrame(tk.Frame):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, Database_Obj, *args, **kwargs):
         title_text = ''
         if 'title_text' in kwargs:
             title_text = kwargs['title_text']
             del kwargs['title_text']
 
+        self.Database_Obj = Database_Obj
         super().__init__(*args, **kwargs)
 
 
@@ -690,18 +733,18 @@ class MyCheckBox(tk.Checkbutton):
 
 
 class ListScrollComboTwo(tk.Frame):
-    def __init__(self, this_height, this_width, this_font, leave_function, *args, **kwargs):
+    def __init__(self, this_height, this_width, this_font, selection_made, *args, **kwargs):
 
 
         super().__init__(*args, **kwargs)
 
         self.listbox = tk.Listbox(self, name='list_box', selectmode='single',
-                                  width=this_width, font=this_font, height=this_height)
+                                  width=this_width, font=this_font, height=this_height, exportselection=0)
 
         self.listbox.bind('<KeyRelease>', self.key_pressed)
 
-        if not leave_function==None:
-            self.listbox.bind('<FocusOut>', leave_function)
+        if not selection_made == None:
+            self.listbox.bind('<FocusOut>', selection_made)
 
         self.listbox.grid(row=1, column=1, sticky="ne")
 
@@ -713,19 +756,30 @@ class ListScrollComboTwo(tk.Frame):
         self.list_box_items = []
         self.the_text=''
         self.current_selection = 0
+        self.listbox.selection_set(0)
 
     def add_item_list(self, item_list):
         self.clear_listbox()
+        self.list_box_items = []
 
         for one_item in item_list:
             self.list_box_items.append(one_item.lower())
             self.listbox.insert(tk.END, one_item)
 
+    def get_all_selected_texts(self):
+        selections = self.listbox.curselection()
+        return_value = []
+
+        for one_selection in selections:
+            return_value.append(self.listbox.get(one_selection))
+
+        return return_value
+
     def get_selected_text(self):
 
         selections = self.listbox.curselection()
         if len(selections)==0:
-            return ''
+            return self.listbox.get(0)
 
         return self.listbox.get(selections[0])
 
@@ -748,6 +802,9 @@ class ListScrollComboTwo(tk.Frame):
         self.update_displayed_list()
 
     def key_pressed(self, e):
+
+        if e.keycode == 9:
+            return
 
         if len(self.listbox.curselection())==0:
             current_selection=0
@@ -783,3 +840,8 @@ class ListScrollComboTwo(tk.Frame):
         
     def set_state(self, this_state):
         self.listbox.configure(state=this_state)
+
+    def set_selection(self, which):
+        self.listbox.selection_clear(0, tk.END)
+        new_selection= self.listbox.get(0,tk.END).index(which)
+        self.listbox.selection_set(new_selection)

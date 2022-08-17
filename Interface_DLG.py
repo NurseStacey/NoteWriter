@@ -9,9 +9,8 @@ from Interface_Admin import InterfaceFieldClass
 class Interface_Select_DLG_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(Database_Obj, *args, **kwargs)
 
-        self.Database_Obj = Database_Obj
         font_size = 24
 
         this_row =1
@@ -50,8 +49,8 @@ class Interface_Select_DLG_Class(MyFrame):
 class InterfaceDLG_DoWhat_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
-        self.Database_Obj = Database_Obj
+        super().__init__(Database_Obj, *args, **kwargs)
+
         font_size = 24
         this_row = 1
         MyButton(font_size,  self.button_frame, text='New Record',
@@ -63,7 +62,11 @@ class InterfaceDLG_DoWhat_Class(MyFrame):
         self.the_fields = []
 
     def New_Record(self):
-        pass
+        
+        for one_widget in self.input_frame:
+            one_widget.delete()
+
+        
 
     def Set_Interface(self, this_interface):
         self.set_title(this_interface)
@@ -74,11 +77,9 @@ class InterfaceDLG_DoWhat_Class(MyFrame):
             this_interface)
 
 class InterfaceDLG_Class(MyFrame):
-    def __init__(self, Database_Obj,  *args, **kwargs):
+    def __init__(self, Database_Obj,   *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
-
-        self.Database_Obj = Database_Obj
+        super().__init__(Database_Obj, *args, **kwargs)
         
     def create_frame(self, interface_fields):
         pass

@@ -19,7 +19,7 @@ The_Window.grid_rowconfigure(2, weight=1)
 
 Database_Obj = MyDatabaseClass()
 
-HomeScreen_DLG_Class(The_Window, title_text='Home Screen', name='homescreen').grid(
+HomeScreen_DLG_Class(Database_Obj, The_Window, title_text='Home Screen', name='homescreen').grid(
     row=1, column=1, sticky='news')
 
 Database_Admin_DLG_Class(Database_Obj,

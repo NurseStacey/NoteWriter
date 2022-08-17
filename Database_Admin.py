@@ -13,9 +13,7 @@ class FieldClass:
 class Database_Admin_DLG_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
-        
-        self.Database_Obj = Database_Obj
+        super().__init__(Database_Obj, *args, **kwargs)
 
         font_size = 24
         MyButton(font_size,  self.button_frame, command=self.new_table, text='New\nTable', height=3, width=10).grid(row=1,  padx=5, column=2)
@@ -38,7 +36,7 @@ class Database_Admin_DLG_Class(MyFrame):
 
     def alter_table(self):
         table_list_box = self.button_frame.nametowidget('table_list_box')
-        table_name = table_list_box.get_selected_text()
+        table_name = table_list_box.get_all_selected_texts()
         if len(table_name)==0:
             messagebox.showerror('error', 'That field name already used')
             return
@@ -57,7 +55,7 @@ class Database_Admin_DLG_Class(MyFrame):
 
     def delete_table(self):
         table_list_box = self.button_frame.nametowidget('table_list_box')
-        table_name_list = table_list_box.get_selected_text()
+        table_name_list = table_list_box.get_all_selected_texts()
 
         for one_table in table_name_list:
             if self.Database_Obj.delete_table(one_table)=='Error':
@@ -85,22 +83,22 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         ####################
         #always have super()     at the top
-        super().__init__(*args, **kwargs)
+        super().__init__(Database_Obj, *args, **kwargs)
         ####################
 
         def type_chosen(e):
+            pass
+            # if self.input_frame.nametowidget(
+            #         'field_type').get_selected_text() in ['string']:
+            #     self.input_frame.nametowidget(
+            #         'field_length').set_state('normal')
+            #     self.input_frame.nametowidget(
+            #         'field_length').focus_set()
+            # else:
+            #     self.input_frame.nametowidget(
+            #         'field_length').set_state('disabled')
 
-            if self.input_frame.nametowidget(
-                    'field_type').get_selected_text() in ['string']:
-                self.input_frame.nametowidget(
-                    'field_length').set_state('normal')
-                self.input_frame.nametowidget(
-                    'field_length').focus_set()
-            else:
-                self.input_frame.nametowidget(
-                    'field_length').set_state('disabled')
 
-        self.Database_Obj = Database_Obj
         self.Table_Name = '' 
 
         font_size = 24
@@ -128,8 +126,8 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         self.input_frame.nametowidget('field_type').add_item_list(field_types)
 
-        MyEntry(font_size,  self.input_frame, name='field_length',
-                validation_type='digit_only').grid(sticky='n', row=2, column=2, pady=(0, 10))
+        # MyEntry(font_size,  self.input_frame, name='field_length',
+        #         validation_type='digit_only').grid(sticky='n', row=2, column=2, pady=(0, 10))
 
         headers = ['name', 'type', 'length']
         self.FieldList = MyMultiListBox(
@@ -138,11 +136,21 @@ class New_Database_Table_DLG_Class(MyFrame):
         self.FieldList.grid(row=3, column=0, columnspan=3, sticky='news')
         self.FieldList.set_height(5)
         self.set_input_frame_columns(2)
+        self.FieldList.set_double_click(self.delete_record)
 
         MyButton(font_size, self.button_frame, text='Add Field', command=self.Add_Field).grid(row=0, column=1, padx=40)
         MyButton(font_size,self.button_frame, text='Add Table', name='add_table_button', command=self.Add_Table).grid(row=0, column=2, padx=40)
         MyButton(font_size,self.button_frame, text='Cancel', command=self.Cancel).grid(row=0, column=3, padx=40)
         self.set_button_frame_columns(3)
+
+    def delete_record(self, event):
+        which = event.widget.curselection()[0]
+
+        if self.FieldList.get_one_value_in_list('name', which)=='Record_ID': 
+            messagebox.showerror('Error','Cannot delete Record_ID')
+            return
+
+        self.FieldList.delete_one_item(which)
 
     def raise_frame(self, which_frame):
         #in case there are things to do when leaving the frame
@@ -162,21 +170,22 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         field_type = self.input_frame.nametowidget(
             'field_type').get_selected_text()
-        field_length=self.input_frame.nametowidget('field_length').get()
-        if field_type=='string' and field_length=='':
-            messagebox.showerror('error', 'For strings we need a length')
-            return
+        # field_length=self.input_frame.nametowidget('field_length').get()
+        # if field_type=='string' and field_length=='':
+        #     messagebox.showerror('error', 'For strings we need a length')
+        #     return
 
         this_field = FieldClass(
             field_name,
             field_type,
-            field_length
+            # field_length
         )
         
         
-        self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
-        self.input_frame.nametowidget('field_length').set_state('normal')
+        
         self.input_frame.nametowidget('field_type').reset()
         self.FieldList.add_one_record(this_field)
 
@@ -208,8 +217,8 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         self.input_frame.nametowidget('table_name').delete(0,tk.END)
         
-        self.input_frame.nametowidget('field_length').delete(0, tk.END)
-        self.input_frame.nametowidget('field_length').set_state('normal')
+        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         
     def Cancel(self):
@@ -295,7 +304,7 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
         for one_item in table_info:
             field_name = one_item[0]
             field_type_temp = one_item[1].decode('utf-8')
-            field_length = 0
+            # field_length = 0
 
             if field_type_temp == 'mediumtext':
                 field_type = 'text'
@@ -303,13 +312,16 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
                 field_type = 'integer'
             elif field_type_temp[:5] == 'float':
                 field_type = 'integer'
+            elif field_type_temp[:3] == 'int':
+                field_type = 'integer'
             elif field_type_temp == 'datetime':
                 field_type = 'date'
             elif field_type_temp[:7] == 'varchar':
                 field_type = 'string'
-                field_length = int(field_type_temp[8:len(
-                    field_type_temp)-1])
+                # field_length = int(field_type_temp[8:len(
+                #     field_type_temp)-1])
 
-            one_field = FieldClass(field_name, field_type, field_length)
+            #one_field = FieldClass(field_name, field_type, field_length)
+            one_field = FieldClass(field_name, field_type)
             self.current_table_info.append(one_field)
             self.FieldList.add_one_record(one_field)

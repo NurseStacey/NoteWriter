@@ -108,11 +108,12 @@ class MyDatabaseClass():
                             one_field.label,
                             int(one_field.order),
                             one_field.type,
-                            int(one_field.length),
+                            # int(one_field.length),
                                one_field.linked_table,
                                one_field.immutable=='Yes'))
         
-        _SQL = "INSERT INTO interfaces (Interface_Name, Table_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Field_Length, Linked_Table, Immutable) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        _SQL = "INSERT INTO interfaces (Interface_Name, Table_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Linked_Table, Immutable) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+#        _SQL = "INSERT INTO interfaces (Interface_Name, Table_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Field_Length, Linked_Table, Immutable) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
         try:
             mycursor = self.get_cursor()
@@ -148,9 +149,9 @@ class MyDatabaseClass():
         _SQL = ''
         if one_field.type == 'string':
             _SQL += one_field.name
-            _SQL += ' VARCHAR('
-            _SQL += str(one_field.length)
-            _SQL += '), '
+            _SQL += ' VARCHAR(255)'
+            # _SQL += str(one_field.length)
+            # _SQL += '), '
         elif one_field.type == 'text':
             _SQL += one_field.name
             _SQL += ' MEDIUMTEXT, '
@@ -291,6 +292,7 @@ class MyDatabaseClass():
         _SQL += chr(34)
         _SQL += which_interface
         _SQL += chr(34)
+        _SQL += ' ORDER BY Field_Order'
 
         mycursor = self.get_cursor()
         #mycursor = self.get_cursor(dictionary=True)

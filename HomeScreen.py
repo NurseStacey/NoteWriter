@@ -4,9 +4,9 @@ from WidgetControls import *
 
 
 class HomeScreen_DLG_Class(MyFrame):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, Database_Obj, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(Database_Obj, *args, **kwargs)
 
         temp_listbox = ListScrollComboTwo(5, 20, 20, self.input_frame)
         temp_listbox.grid(row=1, column=1)

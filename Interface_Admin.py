@@ -11,7 +11,7 @@ class InterfaceFieldClass:
     name: str
     label: str
     type: str
-    length: int
+    # length: int
     order: int
     linked_table: str
     immutable: bool
@@ -19,9 +19,7 @@ class InterfaceFieldClass:
 class Interface_Admin_DLG_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
-
-        self.Database_Obj = Database_Obj
+        super().__init__(Database_Obj, *args, **kwargs)
 
         font_size = 24
         MyButton(font_size,  self.button_frame, command=self.new_interface,
@@ -46,7 +44,7 @@ class Interface_Admin_DLG_Class(MyFrame):
     def alter_interface(self):
         interface_list_box = self.button_frame.nametowidget(
             'interface_list_box')
-        interface_name = interface_list_box.get_selected_text()
+        interface_name = interface_list_box.get_all_selected_texts()
         if len(interface_name) == 0:
             messagebox.showerror('error', 'Must choose an interface')
             return
@@ -104,15 +102,15 @@ class New_Interface_DLG_Class(MyFrame):
 
         ####################
         #always have super()     at the top
-        super().__init__(*args, **kwargs)
+        super().__init__(Database_Obj, *args, **kwargs)
         ####################
 
         def type_chosen(e):
-            if self.input_frame.nametowidget('field_type').get_selected_text() in ['string']:
-                self.input_frame.nametowidget('field_length').set_state('normal')        
-            else:
-                self.input_frame.nametowidget(
-                    'field_length').set_state('disabled')
+            # if self.input_frame.nametowidget('field_type').get_selected_text() in ['string']:
+            #     self.input_frame.nametowidget('field_length').set_state('normal')        
+            # else:
+            #     self.input_frame.nametowidget(
+            #         'field_length').set_state('disabled')
 
 
             if self.input_frame.nametowidget('field_type').get_selected_text() in ['linked_table']:
@@ -125,10 +123,11 @@ class New_Interface_DLG_Class(MyFrame):
                     'linked_table').reset()
                 self.input_frame.nametowidget(
                     'linked_table').set_state('disabled')
+                self.input_frame.nametowidget(
+                    'field_label').focus_set()
 
-        self.Database_Obj = Database_Obj
         self.Table_Name = ''
-
+        self.field_to_update = ''
         font_size = 18
 
         ## Row 1
@@ -156,6 +155,7 @@ class New_Interface_DLG_Class(MyFrame):
         # MyDropDownBox(font_size, type_chosen, self.input_frame, name='field_type').grid(
         #     row=this_row, column=5, columnspan=2, sticky='NW', pady=(0,10), padx=10)
 
+
         ListScrollComboTwo(5, 20, 20, type_chosen, self.input_frame, name='field_type').grid(
                row=this_row, column=5, columnspan=2, sticky='NW', pady=(0,10), padx=10)
 
@@ -174,14 +174,14 @@ class New_Interface_DLG_Class(MyFrame):
         MyLabel(font_size,   self.input_frame,
                 text='Field Name').grid(row=this_row, column=4, columnspan=1, sticky='N')
 
-        MyLabel(font_size,   self.input_frame,
-                text='Field\nLength').grid(row=this_row, column=5,  sticky='W',  columnspan=1,  padx=10)
+        # MyLabel(font_size,   self.input_frame,
+        #         text='Field\nLength').grid(row=this_row, column=5,  sticky='W',  columnspan=1,  padx=10)
 
         MyLabel(font_size,  self.input_frame,
                 text='Order').grid(row=this_row, column=6,  sticky='W',  columnspan=1,  padx=10)
 
         MyLabel(font_size,  self.input_frame,
-                text='Is Required').grid(row=this_row, column=7,  sticky='W',  columnspan=1,  padx=10)
+                text='Is Immutable').grid(row=this_row, column=7,  sticky='W',  columnspan=1,  padx=10)
         # row 4 
         this_row += 1
         MyEntry(font_size, self.input_frame, name='field_label').grid(row=this_row, column=2,  columnspan=1,  pady=(0,10), sticky='N')
@@ -189,8 +189,8 @@ class New_Interface_DLG_Class(MyFrame):
         MyEntry(font_size, self.input_frame, name='field_name',
                 validation_type='DB_string').grid(row=this_row, column=4,  columnspan=1, pady=(0,10), sticky='N')
 
-        MyEntry(font_size,  self.input_frame, width=4,  name='field_length',
-                validation_type='digit_only').grid(row=this_row, column=5,   sticky='N', columnspan=1, pady=(0,10), padx=10)
+        # MyEntry(font_size,  self.input_frame, width=4,  name='field_length',
+        #         validation_type='digit_only').grid(row=this_row, column=5,   sticky='N', columnspan=1, pady=(0,10), padx=10)
 
         MyEntry(font_size,  self.input_frame, width=4,  name='field_order',
                 validation_type='digit_only').grid(row=this_row, column=6,  sticky='NW',  columnspan=1, pady=(0, 10), padx=10)
@@ -212,7 +212,9 @@ class New_Interface_DLG_Class(MyFrame):
 
         #row 7
         this_row += 1
-        headers = ['name', 'type', 'length', 'order',
+        # headers = ['name', 'type', 'length', 'order',
+        #            'label', 'linked_table', 'immutable']
+        headers = ['name', 'type', 'order',
                    'label', 'linked_table', 'immutable']
         self.FieldList = MyMultiListBox(
             InterfaceFieldClass, headers, False, self.input_frame)
@@ -221,26 +223,126 @@ class New_Interface_DLG_Class(MyFrame):
                             pady=15, sticky='news')
         self.FieldList.set_height(5)
         self.FieldList.set_width('type', 10)
-        self.FieldList.set_width('length', 6)
+        # self.FieldList.set_width('length', 6)
         self.FieldList.set_width('order', 5)
         self.FieldList.set_width('immutable', 8)
         self.FieldList.set_width('name', 10)
         self.FieldList.set_width('label', 10)
         self.FieldList.set_width('linked_table', 10)
-
+        self.FieldList.set_double_click(self.delete_record)
+        self.FieldList.set_single_click(self.enable_edit_field_button)
         self.set_input_frame_columns(5)
 
         MyButton(font_size,  self.button_frame, text='Add Field',
                  command=self.Add_Field).grid(row=0, column=1, padx=40)
+        
+
         MyButton(font_size,  self.button_frame, text='Add Interface',
                  name='add_interface_button', command=self.Add_Interface).grid(row=0, column=2, padx=40)
+        
+
         MyButton(font_size,  self.button_frame,
-                 text='Cancel', command=self.Cancel).grid(row=0, column=3, padx=40)
+                 text='Edit Field', command=self.Edit_Field, name='edit_field').grid(row=0, column=3, padx=40)                 
+        
+
+        MyButton(font_size,  self.button_frame,
+                 text='Cancel', command=self.Cancel, name='cancel').grid(row=0, column=4, padx=40)
+
+
+        self.button_frame.nametowidget('edit_field').config(state='disabled')
         self.set_button_frame_columns(3)
+        
+
+    def enable_edit_field_button(self):
+        self.button_frame.nametowidget('edit_field').config(state='normal')
+        self.winfo_toplevel().bind("<Alt-e>", self.Edit_Field)
+
+    def Edit_Field(self, event=None):
+        this_field = self.FieldList.get_current_selection()
+        self.reset_all_fields()
+
+        self.button_frame.nametowidget('edit_field').config(text='Update Field')
+        self.button_frame.nametowidget('edit_field').config(command=self.Update_Field)
+        self.button_frame.nametowidget('cancel').config(command=self.Cancel_Field_Update)
+
+        self.field_to_update = this_field['name']
+        self.input_frame.nametowidget('field_name').insert(0, this_field['name'])
+        self.input_frame.nametowidget('field_order').delete(0,tk.END)
+
+        self.input_frame.nametowidget('field_order').insert(0, this_field['order'])
+        self.input_frame.nametowidget(
+            'field_label').insert(0, this_field['label'])
+        if this_field['immutable']=='Yes':
+            self.Checkbox_var.set(1)
+        linked_table = this_field['linked_table']
+        if not linked_table=='':
+            self.input_frame.nametowidget['linked_table'].set_selection(
+                linked_table)
+
+        self.FieldList.set_state('disabled')
+        self.winfo_toplevel().bind("<Alt-u>", self.Edit_Field)
+        self.winfo_toplevel().unbind("<Alt-e>")
+
+    def Cancel_Field_Update(self):
+        self.reset_edit_field_button()
+        
+        
+    def reset_edit_field_button(self):
+        self.button_frame.nametowidget(
+            'edit_field').config(command=self.Edit_Field)
+        self.button_frame.nametowidget(
+            'edit_field').config(text='Edit Field')
+        self.button_frame.nametowidget(
+            'edit_field').config(state='disabled')
+        self.button_frame.nametowidget('cancel').config(
+            command=self.Cancel)
+        self.FieldList.clear_all_selections()
+        
+
+    def delete_record_to_update(self):
+        self.FieldList.delete_one_record('name', self.field_to_update)
+        
+
+    def Update_Field(self):
+
+        self.winfo_toplevel().bind("<Alt-e>", self.Edit_Field)
+        self.winfo_toplevel().unbind("<Alt-u>")
+        
+        self.FieldList.set_state('normal')
+        self.delete_record_to_update()
+        self.Add_Field()
+
+        self.reset_edit_field_button()
+        self.reset_all_fields()
+
+
+        
+        
+
+    # def populate_fields(self, this_field):
+        
+    #     self.Checkbox_var.set(this_field['immutable']=='Yes')
+    #     self.nametowidget('field_type').set_selection(this_field['type'])
+    #     self.nametowidget('field_label').insert(0, this_field['label'])
+    #     self.nametowidget('field_order').insert(0, this_field['order'])
+
+
+    def delete_record(self, event=None):
+
+        which = self.FieldList.get_selection()[0]
+        #which = event.widget.curselection()[0]
+
+        self.FieldList.delete_one_item(which)
 
     def tkraise(self):
+        self.winfo_toplevel().bind("<Alt-f>", self.Add_Field)
+        self.winfo_toplevel().bind("<Alt-i>", self.Add_Interface)
+        self.winfo_toplevel().bind("<Alt-c>", self.Cancel)
+
         self.populate_interface_box()
         self.input_frame.nametowidget('field_order').insert(0, '1')
+        self.reset_edit_field_button()
+
         super().tkraise()
     
     def populate_interface_box(self):
@@ -254,7 +356,7 @@ class New_Interface_DLG_Class(MyFrame):
         self.input_frame.nametowidget(
             'linked_table').add_item_list(interface_names)
 
-    def Add_Interface(self):
+    def Add_Interface(self, event=None):
 
         table_name = self.input_frame.nametowidget('table_name').get()
         table_list = self.Database_Obj.get_list_current_tables()
@@ -284,45 +386,46 @@ class New_Interface_DLG_Class(MyFrame):
         self.input_frame.nametowidget('table_name').delete(0, tk.END)
         self.input_frame.nametowidget('interface_name').delete(0, tk.END)
         #self.field_type_value.set('string') - dropdown
-        self.input_frame.nametowidget('field_length').delete(0, tk.END)
-        self.input_frame.nametowidget('field_length').set_state('normal')
+        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         self.input_frame.nametowidget('field_order').delete(0, tk.END)
         self.input_frame.nametowidget('field_type').reset()
         self.input_frame.nametowidget('linked_table').reset()
 
-    def Add_Field(self):
+    def Add_Field(self, event=None):
 
         field_name = self.input_frame.nametowidget('field_name').get()
         field_type = self.input_frame.nametowidget('field_type').get_selected_text()
-        field_length = self.input_frame.nametowidget('field_length').get()
-        linked_table = self.input_frame.nametowidget(
-            'linked_table').get_selected_text()
+        linked_table=''
+        if field_type=='linked_table':
+            linked_table = self.input_frame.nametowidget(
+                'linked_table').get_selected_text()
 
         if field_type=='linked_table' and linked_table =='':
             messagebox.showerror('error', 'Need to select a table to link to')
-            return
+            return 'Fail'
 
-        if field_type == 'string' and field_length == '':
-            messagebox.showerror('error', 'Need to enter a field length')
-            return        
+        # if field_type == 'string' and field_length == '':
+        #     messagebox.showerror('error', 'Need to enter a field length')
+        #     return        
 
         if self.FieldList.value_in_list('name', field_name):
             messagebox.showerror('error', 'That field name already used')
-            return
+            return 'Fail'
 
         field_label = self.input_frame.nametowidget('field_label').get()
         if self.FieldList.value_in_list('label', field_label):
             messagebox.showerror('error', 'That field label already used')
-            return
+            return 'Fail'
 
         field_order = self.input_frame.nametowidget('field_order').get()
         if self.FieldList.value_in_list('order', field_order):
             messagebox.showerror('error', 'Another field has that order value')
-            return
+            return 'Fail'
         if field_order == '':
             messagebox.showerror('error', 'Need value for field order')
-            return
+            return 'Fail'
 
         immutable = 'Yes'
         if self.Checkbox_var.get()==0:
@@ -332,28 +435,37 @@ class New_Interface_DLG_Class(MyFrame):
             field_name,
             field_label,
             field_type,  
-            field_length,
+            # field_length,
             field_order,
             linked_table,
             immutable,
         )
 
+
+        self.FieldList.add_one_record(this_field)
+        self.input_frame.nametowidget('field_type').focus_set()
+        self.reset_all_fields()
+
+
+    def reset_all_fields(self):
         #self.field_type_value.set('string')
-        self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        field_order = self.input_frame.nametowidget('field_order').get()
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         self.input_frame.nametowidget('field_label').delete(0, tk.END)
         self.input_frame.nametowidget('field_order').delete(0, tk.END)
-        self.input_frame.nametowidget('field_order').insert(0, str(int(field_order)+1))
-        self.input_frame.nametowidget('field_length').set_state('normal')
+        self.input_frame.nametowidget('field_order').insert(
+            0, str(int(field_order)+1))
+        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_type').reset()
         self.input_frame.nametowidget('linked_table').reset()
         self.Checkbox_var.set(0)
-        self.FieldList.add_one_record(this_field)
+        self.FieldList.clear_all_selections()
 
-
-
-    def Cancel(self):
-
+    def Cancel(self, event=None):
+        self.winfo_toplevel().unbind("<Alt-f>")
+        self.winfo_toplevel().unbind("<Alt-i>")
+        self.winfo_toplevel().unbind("<Alt-c>")
         self.clear_widgets()
         self.winfo_toplevel().nametowidget('interface_admin').populate_interface_box()
         super().Cancel()
@@ -364,8 +476,8 @@ class New_Interface_DLG_Class(MyFrame):
         self.input_frame.nametowidget('interface_name').delete(0, tk.END)
         self.input_frame.nametowidget('table_name').delete(0, tk.END)
         # self.field_type_value.set('string') - dropdown
-        self.input_frame.nametowidget('field_length').delete(0, tk.END)
-        self.input_frame.nametowidget('field_length').set_state('normal')
+        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         self.input_frame.nametowidget('field_order').delete(0, tk.END)
         self.input_frame.nametowidget('field_type').reset()
@@ -467,7 +579,10 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
         for one_item in interface_records:
 
-            one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'], one_item['Field_Type'], one_item['Field_Length'], one_item['Field_Order'], one_item['Linked_Table'], one_item['Immutable'])
+            one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'], one_item['Field_Type'],  one_item['Field_Order'], one_item['Linked_Table'], one_item['Immutable'])
+            # one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'], one_item['Field_Type'],
+            #                                 one_item['Field_Length'], one_item['Field_Order'], one_item['Linked_Table'], one_item['Immutable'])
             self.FieldList.add_one_record(one_field)
             self.current_interface_info.append(one_field)
+
 
