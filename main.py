@@ -20,7 +20,7 @@ The_Window.grid_rowconfigure(2, weight=1)
 Database_Obj = MyDatabaseClass()
 
 HomeScreen_DLG_Class(Database_Obj, The_Window, title_text='Home Screen', name='homescreen').grid(
-    row=1, column=1, sticky='news')
+    row=1, column=1, sticky='news') 
 
 Database_Admin_DLG_Class(Database_Obj,
     The_Window, title_text='Database Management', name='database_admin').grid(row=1, column=1, sticky='news')
@@ -46,8 +46,8 @@ Alter_Interface_DLG_Class(Database_Obj,
 Interface_Select_DLG_Class(Database_Obj,
                           The_Window, title_text='Select Interface', name='select_interface').grid(row=1, column=1, sticky='news')
 
-InterfaceDLG_Class(Database_Obj,
-                           The_Window, title_text='', name='interface_dlg').grid(row=1, column=1, sticky='news')
+InterfaceDLG_New_Record_Class(Database_Obj,
+                           The_Window, title_text='', name='interface_new_record_dlg').grid(row=1, column=1, sticky='news')
 
 InterfaceDLG_DoWhat_Class(Database_Obj,
                           The_Window, title_text='', name='interface_dlg').grid(row=1, column=1, sticky='news')

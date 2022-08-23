@@ -8,7 +8,6 @@ from WidgetControls import *
 class FieldClass:
     name:str
     type:str
-    length:int
 
 class Database_Admin_DLG_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):

@@ -53,19 +53,31 @@ class InterfaceDLG_DoWhat_Class(MyFrame):
 
         font_size = 24
         this_row = 1
+
         MyButton(font_size,  self.button_frame, text='New Record',
-                 command=self.New_Record).grid(row=0, column=1, padx=40)
+                 command=self.New_Record).grid(row=this_row, column=1, padx=40)
+        MyButton(font_size,  self.button_frame, text='Edit Record',
+                 command=self.Edit_Record).grid(row=this_row, column=2, padx=40)
+        MyButton(font_size,  self.button_frame, text='Delete Record',
+                 command=self.Delete_Record).grid(row=this_row, column=3, padx=40)
+
         MyButton(font_size,  self.button_frame, text='Cancel',
-                 command=self.Cancel).grid(row=0, column=2, padx=40)
+                 command=self.Cancel).grid(row=this_row, column=4, padx=40)
 
         self.the_interface = ''
         self.the_fields = []
 
-    def New_Record(self):
-        
-        for one_widget in self.input_frame:
-            one_widget.delete()
+    def Delete_Record(self):
+        pass
 
+    def Edit_Record(self):
+        pass
+
+    def New_Record(self):
+        New_Record_Frame = self.winfo_toplevel().nametowidget('interface_new_record_dlg')
+
+        New_Record_Frame.Set_Interface(self.the_interface)
+        New_Record_Frame.tkraise()
         
 
     def Set_Interface(self, this_interface):
@@ -73,16 +85,80 @@ class InterfaceDLG_DoWhat_Class(MyFrame):
 
         self.the_interface = this_interface
 
-        self.the_fields = self.Database_Obj.get_interface_records(
-            this_interface)
 
-class InterfaceDLG_Class(MyFrame):
+
+class InterfaceDLG_New_Record_Class(MyFrame):
     def __init__(self, Database_Obj,   *args, **kwargs):
 
         super().__init__(Database_Obj, *args, **kwargs)
+
+        self.the_interface=''
+        self.the_field_names=[]
+        self.these_widgets=[]
+                
+    def create_frame(self):
+        self.the_field = self.Database_Obj.get_interface_records(
+            self.the_interface)
+
+        font_size = 24
+        this_row=1
+
+        for one_field in self.the_field:
+            self.the_field_names.append(one_field['Field_Name'])
+            temp = MyLabel(font_size,self.input_frame, text=one_field['Field_Lable'])
+            temp.grid(row=this_row, column=1)
+            self.these_widgets.append(temp)
+            temp = MyEntry(font_size, self.input_frame, validation_type=one_field['Field_Type'], name=one_field['Field_Name'])
+            temp.grid(row=this_row, column=2)
+
+            self.these_widgets.append(temp)
+            this_row += 1
+
+        MyButton(font_size,  self.button_frame, text='Save Record',
+                 command=self.Save_Record).grid(row=0, column=1, padx=40)
+        MyButton(font_size,  self.button_frame, text='Cancel',
+                 command=self.Cancel).grid(row=0, column=2, padx=40)
+
+    def Save_Record(self):
         
-    def create_frame(self, interface_fields):
-        pass
+        records_to_add = []
+
+        for one_field in self.the_field:
+            one_record = {}
+            one_record['type'] = one_field['Field_Type']
+            one_record['column'] = one_field['Field_Name']
+
+            if one_field['Field_Type'] == 'string':
+                one_record['value'] = self.input_frame.nametowidget(
+                    one_field['Field_Name']).get()
+                
+            elif one_field['Field_Type'] == 'integer':
+                one_record['value'] = int(self.input_frame.nametowidget(
+                    one_field['Field_Name']).get())
+            elif one_field['Field_Type'] == 'double':
+                one_record['value'] = float(self.input_frame.nametowidget(
+                    one_field['Field_Name']).get())
+
+            records_to_add.append(one_record)
+
+        interface_info = self.Database_Obj.get_interface_info(
+            self.the_interface)
+
+        self.Database_Obj.add_record(interface_info['Interface_Table'],records_to_add)
 
 
 
+    def Cancel(self):
+
+        for one_widget in self.these_widgets:
+            one_widget.destroy()
+
+        super().Cancel()
+
+    def Set_Interface(self, this_interface):
+        self.set_title(this_interface+'\nAdd Record')
+
+        self.the_interface = this_interface
+
+
+        self.create_frame()

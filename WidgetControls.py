@@ -5,6 +5,7 @@ from universal_components import *
 from tkinter import simpledialog
 import dataclasses
 from universal_components import *
+from tkinter import messagebox
 
 class ListScrollCombo(tk.Frame):
     def __init__(self, show_forward_backward_buttons, this_height, this_width, this_font, *args, **kwargs):
@@ -407,6 +408,10 @@ class MyMultiListBox(tk.Frame):
         index = self.listboxframe.nametowidget(which).get(0, tk.END).index(value)
         self.delete_one_item(index)
 
+    def get_values_in_column(self, which):
+        return self.listboxframe.nametowidget(which).get(0, tk.END)
+
+        
     def add_one_record(self, record):
 
         size = 0
@@ -527,36 +532,186 @@ class MyLabel(tk.Label):
 
         super().__init__(*args, **kwargs)  
 
-#class MyEntry(tk.Entry):
 class MyEntry(tk.Frame):    
     def __init__(self, font_size, *args, **kwargs):
-
+        
+        validate_type='key'
         validation_field_function=self.do_nothing
+        this_is_date = False
+
         if 'validation_type' in kwargs:
             if kwargs['validation_type'] == 'DB_string':
                 validation_field_function = self.MySQL_Field_Name
                 
             elif kwargs['validation_type'] == 'digit_only':
-                validation_field_function = self.only_numbers           
+                validation_field_function = self.only_numbers  
+      
+            elif kwargs['validation_type'] == 'integer':
+                validate_type='focusout'
+                validation_field_function = self.only_integer  
+            elif kwargs['validation_type'] == 'double':
+                validate_type='focusout'
+                validation_field_function = self.only_double      
+            elif kwargs['validation_type'] == 'date':                
+                this_is_date = True
+                #validation_field_function = self.only_date
+                #validate_type='all'
             del kwargs['validation_type']
-
-       
 
         super().__init__(*args, **kwargs)
 
         validation_field = self.register(validation_field_function)
-        kwargs['validate']='key'
+        kwargs['validate'] = validate_type
         kwargs['font'] = font_return(font_size)
-        kwargs['validatecommand']=(validation_field,'%S')
+
+        if validate_type in ['all','focusout']:
+            kwargs['validatecommand']=(validation_field,'%P')
+        else:
+            kwargs['validatecommand']=(validation_field,'%S')
 
         self.Entry_Box = tk.Entry(self, **kwargs)
+
         self.Entry_Box.grid(row=0, column=0)
 
-        
+        if this_is_date:
+            self.Entry_Box.bind('<KeyRelease>', self.only_date)        
+
         self.allowed_charactors = [chr(i+ord('a')) for i in range(26)] +\
             [chr(i+ord('A')) for i in range(26)] +\
                 ['_'] +\
             [chr(i+ord('0')) for i in range(10)]
+
+        #for date validation
+        self.current_text = ''
+
+    def only_date(self, event):
+
+        if event.keycode==8:
+            return
+
+        text=self.Entry_Box.get()
+        #nothing here
+        if text == '':
+            return
+
+        last_char = text[len(text)-1:]
+        if not last_char.isdigit():
+            text=text[0:len(text)-1]
+            self.Entry_Box.delete(0,tk.END)
+            self.Entry_Box.insert(0,text)
+            return
+
+        if len(text)==3:
+            pass
+        #month
+        if len(text)<3:
+            if len(text)==1 and not text in ['0','1']:
+                self.Entry_Box.delete(0, tk.END)
+                text= '0' + text + '\\'
+                self.Entry_Box.insert(0,text)
+                # self.Entry_Box.after_idle(
+                #     lambda: self.Entry_Box.configure(validate='all'))
+                
+            elif len(text)==2:
+                if text[0]=='0' and not text[1]=='0':
+                    self.Entry_Box.delete(0, tk.END)
+                    text=text + '\\'
+                    self.Entry_Box.insert(0, text)
+                    # self.Entry_Box.after_idle(
+                    #     lambda: self.Entry_Box.configure(validate='all'))
+                  
+                elif text[0]=='1' and text[1] in ['0','1','2']:
+                    self.Entry_Box.delete(0, tk.END)
+                    text = text + '\\'
+                    self.Entry_Box.insert(0, text)
+                    # self.Entry_Box.after_idle(
+                    #     lambda: self.Entry_Box.configure(validate='all'))
+                    
+                else:
+                    text=text[0:len(text)-1]
+                    self.Entry_Box.delete(0,tk.END)
+                    self.Entry_Box.insert(0,text)
+            return
+
+
+        #day
+        if len(text)<6:
+            month = text[0:2]
+            allowed_first_digits = ['0','1','2']
+            if not month=='02':
+                allowed_first_digits += ['3']
+
+            if len(text) == 4 and not text[3] in allowed_first_digits:
+                self.Entry_Box.delete(0, tk.END)
+                day = text[3]
+                text = text[0:3] + '0' + day + '\\'
+                self.Entry_Box.insert(0, text)
+                
+            elif len(text)==5:
+                day = int(text[3:5])
+                month = text[0:2]
+                if not(day > days_in_month[month]):
+                    self.Entry_Box.delete(0, tk.END)
+                    text = text + '\\'
+                    self.Entry_Box.insert(0, text)
+                else:
+                    text=text[0:len(text)-1]
+                    self.Entry_Box.delete(0,tk.END)
+                    self.Entry_Box.insert(0,text)                    
+                
+            return
+
+        #year
+        if len(text)==8:
+            year = text[6:]
+            if year in ['19', '20']:
+                return
+            century='19'
+            if int(year)<19:
+                century='20'
+
+            text = text[0:6] + century + year
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+
+        #check year is valid - leap days
+        if len(text)==10:
+            month=text[:2]
+            day = text[3:5]
+            year = text[6:10]
+
+            if int(month)==2 and int(day)==29:
+                if not(int(year)%4==0 and not int(year)==2000):
+                    messagebox.showerror('error', 'That is not a valid date')
+
+
+        if len(text)>10:
+            text = text[0:10]
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+
+
+    def only_double(self, text):
+
+        try:
+            float(text)
+        except ValueError:
+            messagebox.showerror('Error', 'Must be numberic value')
+            # self.Entry_Box.focus() do I need this?
+            return False
+        
+        return True
+
+    def only_integer(self, text):
+        
+        try:
+            int(text)
+        except ValueError:
+            messagebox.showerror('Error', 'Must be an integer value')
+            # self.Entry_Box.focus() do I need this?
+            return False
+
+        return True
 
     def get(self):
 
@@ -592,7 +747,6 @@ class MyFrame(tk.Frame):
 
         self.Database_Obj = Database_Obj
         super().__init__(*args, **kwargs)
-
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)       
@@ -757,6 +911,9 @@ class ListScrollComboTwo(tk.Frame):
         self.the_text=''
         self.current_selection = 0
         self.listbox.selection_set(0)
+
+    def set_double_click(self, function):
+        self.listbox.bind('<Double-Button-1>', function)
 
     def add_item_list(self, item_list):
         self.clear_listbox()
