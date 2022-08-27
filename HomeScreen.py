@@ -17,20 +17,25 @@ class HomeScreen_DLG_Class(MyFrame):
 
         temp_listbox.add_item_list(fruit_list)
 
-        MyButton(24, self.button_frame, command=self.new_clinic, text='New\nClinic', height=3, width=10).grid(row=1,  padx=5, column=1)
-        MyButton(24,  self.button_frame, command=self.clinic_admin, text='Clinic\nAdmin',  height=3, width=10).grid(row=1, padx=5,column=2)
-        MyButton(24, self.button_frame, command=self.provider_admin, text='Provider\nAdmin', height=3, width=10).grid(row=1,  padx=5, column=3)
-        MyButton(24,  self.button_frame, command=self.database_admin, text='Database\nAdmin', height=3, width=10).grid(row=1,  padx=5, column=4)
+        # MyButton(24, self.button_frame, command=self.new_clinic, text='New\nClinic', height=3, width=10).grid(row=1,  padx=5, column=1)
+        # MyButton(24,  self.button_frame, command=self.clinic_admin, text='Clinic\nAdmin',  height=3, width=10).grid(row=1, padx=5,column=2)
+        # MyButton(24, self.button_frame, command=self.provider_admin, text='Provider\nAdmin', height=3, width=10).grid(row=1,  padx=5, column=3)
+        MyButton(24,  self.button_frame, command=self.database_admin, text='Database\nAdmin', height=3, width=10).grid(row=1,  padx=5, column=1)
         MyButton(24,  self.button_frame, command=self.interface_management,
-                 text='Interface\nManagement', height=3, width=10).grid(row=1,  padx=5, column=5)
+                 text='Interface\nManagement', height=3, width=10).grid(row=1,  padx=5, column=2)
         
         MyButton(24,  self.button_frame, command=self.select_interface,
-                 text='Select\nInterface', height=3, width=10).grid(row=2,  padx=5, column=1)
+                 text='Select\nInterface', height=3, width=10).grid(row=1,  padx=5, column=3)
 
+        # MyButton(24,  self.button_frame, command=self.test,
+        #          text='test', height=3, width=10).grid(row=2,  padx=5, column=2)
 
     def tkraise(self):
         super().tkraise()
 
+    def test(self):
+        self.raise_frame('test')
+        
     def new_clinic(self):
         self.raise_frame('new_clinic')
 

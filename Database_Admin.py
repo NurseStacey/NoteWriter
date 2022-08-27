@@ -22,8 +22,6 @@ class Database_Admin_DLG_Class(MyFrame):
 
         ListScrollComboTwo(10, 20, 25, None, self.button_frame,
                            name='table_list_box').grid(row=1, column=1, pady=30, sticky='NW', rowspan=2)
-        # self.button_frame.nametowidget(
-        #     'table_list_box').config(width=350, height=450)
         
         self.button_frame.nametowidget(
             'table_list_box').set_selection_mode('multiple')
@@ -128,9 +126,9 @@ class New_Database_Table_DLG_Class(MyFrame):
         # MyEntry(font_size,  self.input_frame, name='field_length',
         #         validation_type='digit_only').grid(sticky='n', row=2, column=2, pady=(0, 10))
 
-        headers = ['name', 'type', 'length']
+        headers = ['name', 'type']
         self.FieldList = MyMultiListBox(
-            FieldClass, headers, False, self.input_frame)
+            headers, self.input_frame)
         self.FieldList.set_font_size(16)
         self.FieldList.grid(row=3, column=0, columnspan=3, sticky='news')
         self.FieldList.set_height(5)
@@ -174,12 +172,14 @@ class New_Database_Table_DLG_Class(MyFrame):
         #     messagebox.showerror('error', 'For strings we need a length')
         #     return
 
-        this_field = FieldClass(
-            field_name,
-            field_type,
-            # field_length
-        )
-        
+        # this_field = FieldClass(
+        #     field_name,
+        #     field_type,
+        #     # field_length
+        # )
+        this_field={}
+        this_field['name']=field_name
+        this_field['type'] = field_type
         
         # self.input_frame.nametowidget('field_length').delete(0, tk.END)
         # self.input_frame.nametowidget('field_length').set_state('normal')
@@ -261,7 +261,7 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
 
         new_fields = []
         for one_field in fields_from_multibox:
-            if next((x for x in self.current_table_info if x.name == one_field.name), None) == None:
+            if next((x for x in self.current_table_info if x['name'] == one_field['name']), None) == None:
                 new_fields.append(one_field)
 
         if not new_fields == []:
@@ -273,7 +273,7 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
         #check if fields were removed.
         fields_to_remove = []
         for one_field in self.current_table_info:
-            if next((x for x in fields_from_multibox if x.name == one_field.name), None) == None:
+            if next((x for x in fields_from_multibox if x['name'] == one_field['name']), None) == None:
                 fields_to_remove.append(one_field)
 
         if not fields_to_remove == []:
@@ -321,6 +321,9 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
                 #     field_type_temp)-1])
 
             #one_field = FieldClass(field_name, field_type, field_length)
-            one_field = FieldClass(field_name, field_type)
+            #one_field = FieldClass(field_name, field_type)
+            one_field={}
+            one_field['name']=field_name
+            one_field['field_type']=field_type
             self.current_table_info.append(one_field)
             self.FieldList.add_one_record(one_field)

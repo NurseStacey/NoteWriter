@@ -37,7 +37,8 @@ class Interface_Admin_DLG_Class(MyFrame):
 
 
     def tkraise(self):
-
+        self.populate_interface_box()
+        
         super().tkraise()
 
     def alter_interface(self):
@@ -86,6 +87,8 @@ class Interface_Admin_DLG_Class(MyFrame):
             messagebox.showerror('Error', 'Error retrieving interface list')
             return
 
+        self.button_frame.nametowidget(
+            'interface_list_box').clear_listbox()
         self.button_frame.nametowidget(
             'interface_list_box').add_item_list(interface_list)
 
@@ -136,9 +139,9 @@ class New_Interface_DLG_Class(MyFrame):
 
         self.field_to_update = this_field['name']
         self.input_frame.nametowidget('field_name').insert(0, this_field['name'])
-        self.input_frame.nametowidget('field_order').delete(0,tk.END)
+        #self.input_frame.nametowidget('field_order').delete(0,tk.END)
 
-        self.input_frame.nametowidget('field_order').insert(0, this_field['order'])
+        #self.input_frame.nametowidget('field_order').insert(0, this_field['order'])
         self.input_frame.nametowidget(
             'field_label').insert(0, this_field['label'])
         if this_field['immutable']=='Yes':
@@ -220,8 +223,8 @@ class New_Interface_DLG_Class(MyFrame):
         MyLabel(font_size,   self.input_frame,
                 text='Field Name').grid(row=this_row, column=4, columnspan=1, sticky='N')
 
-        MyLabel(font_size,  self.input_frame,
-                text='Order').grid(row=this_row, column=6,  sticky='W',  columnspan=1,  padx=10)
+        # MyLabel(font_size,  self.input_frame,
+        #         text='Order').grid(row=this_row, column=6,  sticky='W',  columnspan=1,  padx=10)
 
         MyLabel(font_size,  self.input_frame,
                 text='Is Immutable').grid(row=this_row, column=7,  sticky='W',  columnspan=1,  padx=10)
@@ -233,8 +236,8 @@ class New_Interface_DLG_Class(MyFrame):
         MyEntry(font_size, self.input_frame, name='field_name',
                 validation_type='DB_string').grid(row=this_row, column=4,  columnspan=1, pady=(0, 10), sticky='N')
 
-        MyEntry(font_size,  self.input_frame, width=4,  name='field_order',
-                validation_type='digit_only').grid(row=this_row, column=6,  sticky='NW',  columnspan=1, pady=(0, 10), padx=10)
+        # MyEntry(font_size,  self.input_frame, width=4,  name='field_order',
+        #         validation_type='digit_only').grid(row=this_row, column=6,  sticky='NW',  columnspan=1, pady=(0, 10), padx=10)
 
         self.Checkbox_var = tk.IntVar()
         MyCheckBox(self.input_frame, width=4, name='immutable', variable=self.Checkbox_var).grid(
@@ -253,20 +256,30 @@ class New_Interface_DLG_Class(MyFrame):
         #row 7
         this_row += 1
 
-        headers = ['name', 'type', 'order',
-                   'label', 'linked_table', 'immutable']
+        headers = ['field_name', 'field_type',
+                   'field_label', 'linked_table', 'immutable']
+
+        # headers = ['name', 'type', 'order',
+        #            'label', 'linked_table', 'immutable']     
         self.FieldList = MyMultiListBox(
-            InterfaceFieldClass, headers, False, self.input_frame)
+            headers, self.input_frame)              
+        # self.FieldList = MyMultiListBox(
+        #     InterfaceFieldClass, headers, False, self.input_frame)
+
+        self.FieldList.change_lable_text('field_name', 'Field Name')
+        self.FieldList.change_lable_text('field_type', 'Field Type')
+        self.FieldList.change_lable_text('field_label', 'Field Label')
+        self.FieldList.change_lable_text('linked_table', 'Linked Table')
+        self.FieldList.change_lable_text('immutable', 'Immutable Name')
+
         self.FieldList.set_font_size(16)
         self.FieldList.grid(row=this_row, column=2, columnspan=6,
                             pady=15, sticky='news')
         self.FieldList.set_height(5)
-        self.FieldList.set_width('type', 10)
-        # self.FieldList.set_width('length', 6)
-        self.FieldList.set_width('order', 5)
+        self.FieldList.set_width('field_type', 10)
         self.FieldList.set_width('immutable', 8)
-        self.FieldList.set_width('name', 10)
-        self.FieldList.set_width('label', 10)
+        self.FieldList.set_width('field_name', 10)
+        self.FieldList.set_width('field_label', 10)
         self.FieldList.set_width('linked_table', 10)
         self.FieldList.set_double_click(self.delete_record)
         self.FieldList.set_single_click(self.enable_edit_field_button)
@@ -314,18 +327,6 @@ class New_Interface_DLG_Class(MyFrame):
         self.reset_edit_field_button()
         self.reset_all_fields()
 
-
-        
-        
-
-    # def populate_fields(self, this_field):
-        
-    #     self.Checkbox_var.set(this_field['immutable']=='Yes')
-    #     self.nametowidget('field_type').set_selection(this_field['type'])
-    #     self.nametowidget('field_label').insert(0, this_field['label'])
-    #     self.nametowidget('field_order').insert(0, this_field['order'])
-
-
     def delete_record(self, event=None):
 
         which = self.FieldList.get_selection()[0]
@@ -337,7 +338,7 @@ class New_Interface_DLG_Class(MyFrame):
         
         build_name_gui = BuildName_DLG_Class(self)
         build_name_gui.build_gui(self.FieldList.get_values_in_column(
-            'name'), self.set_name_formula)
+            'field_name'), self.set_name_formula)
         build_name_gui.grab_set()
 
     def set_name_formula(self, new_formula):
@@ -350,8 +351,9 @@ class New_Interface_DLG_Class(MyFrame):
         self.winfo_toplevel().bind("<Alt-i>", self.Add_Interface)
         self.winfo_toplevel().bind("<Alt-c>", self.Cancel)
         self.winfo_toplevel().bind("<Alt-n>", self.create_name)
+        self.winfo_toplevel().bind("<Alt-a>", self.Add_Interface)
         self.populate_interface_box()
-        self.input_frame.nametowidget('field_order').insert(0, '1')
+        # self.input_frame.nametowidget('field_order').insert(0, '1')
         self.reset_edit_field_button()
 
         super().tkraise()
@@ -381,9 +383,8 @@ class New_Interface_DLG_Class(MyFrame):
 
 
         interface_name = self.input_frame.nametowidget('interface_name').get().strip()
-        # record_name_formula = self.input_frame.nametowidget('record_name_formula')[
-        #     'text']
 
+        #temp till I fix this code
         all_fields = self.FieldList.get_all_records()
         if self.Database_Obj.add_new_table(table_name, all_fields) == 'Error':
             messagebox.showerror('Error', 'Error adding table')
@@ -402,7 +403,7 @@ class New_Interface_DLG_Class(MyFrame):
         # self.input_frame.nametowidget('field_length').delete(0, tk.END)
         # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
-        self.input_frame.nametowidget('field_order').delete(0, tk.END)
+        #self.input_frame.nametowidget('field_order').delete(0, tk.END)
         self.input_frame.nametowidget('field_type').reset()
         self.input_frame.nametowidget('linked_table').reset()
 
@@ -423,36 +424,45 @@ class New_Interface_DLG_Class(MyFrame):
         #     messagebox.showerror('error', 'Need to enter a field length')
         #     return        
 
-        if self.FieldList.value_in_list('name', field_name):
+        if self.FieldList.value_in_list('field_name', field_name):
             messagebox.showerror('error', 'That field name already used')
             return 'Fail'
 
         field_label = self.input_frame.nametowidget('field_label').get()
-        if self.FieldList.value_in_list('label', field_label):
+        if self.FieldList.value_in_list('field_label', field_label):
             messagebox.showerror('error', 'That field label already used')
             return 'Fail'
 
-        field_order = self.input_frame.nametowidget('field_order').get()
-        if self.FieldList.value_in_list('order', field_order):
-            messagebox.showerror('error', 'Another field has that order value')
-            return 'Fail'
-        if field_order == '':
-            messagebox.showerror('error', 'Need value for field order')
-            return 'Fail'
+        # field_order = self.input_frame.nametowidget('field_order').get()
+        # if self.FieldList.value_in_list('order', field_order):
+        #     messagebox.showerror('error', 'Another field has that order value')
+        #     return 'Fail'
+        # if field_order == '':
+        #     messagebox.showerror('error', 'Need value for field order')
+        #     return 'Fail'
 
         immutable = 'Yes'
         if self.Checkbox_var.get()==0:
             immutable = 'No'
 
-        this_field = InterfaceFieldClass(
-            field_name,
-            field_label,
-            field_type,  
-            # field_length,
-            field_order,
-            linked_table,
-            immutable,
-        )
+        # this_field = InterfaceFieldClass(
+        #     field_name,
+        #     field_label,
+        #     field_type,  
+        #     # field_length,
+        #     0,
+        #     linked_table,
+        #     immutable,
+        # )
+        #         headers = ['name', 'type',
+        #            'label', 'linked_table', 'immutable']
+        this_field={}
+        this_field['field_name'] = field_name
+        this_field['field_type'] = field_type
+        this_field['field_label'] = field_label
+        this_field['linked_table'] = linked_table
+        this_field['immutable'] = immutable
+
 
 
         self.FieldList.add_one_record(this_field)
@@ -463,12 +473,12 @@ class New_Interface_DLG_Class(MyFrame):
     def reset_all_fields(self):
         #self.field_type_value.set('string')
         # self.input_frame.nametowidget('field_length').delete(0, tk.END)
-        field_order = self.input_frame.nametowidget('field_order').get()
+        #field_order = self.input_frame.nametowidget('field_order').get()
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         self.input_frame.nametowidget('field_label').delete(0, tk.END)
-        self.input_frame.nametowidget('field_order').delete(0, tk.END)
-        self.input_frame.nametowidget('field_order').insert(
-            0, str(int(field_order)+1))
+        # self.input_frame.nametowidget('field_order').delete(0, tk.END)
+        # self.input_frame.nametowidget('field_order').insert(
+        #     0, str(int(field_order)+1))
         # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_type').reset()
         self.input_frame.nametowidget('linked_table').reset()
@@ -480,6 +490,7 @@ class New_Interface_DLG_Class(MyFrame):
         self.winfo_toplevel().unbind("<Alt-i>")
         self.winfo_toplevel().unbind("<Alt-c>")
         self.winfo_toplevel().unbind("<Alt-n>")
+        self.winfo_toplevel().unbind("<Alt-a>")
         self.clear_widgets()
         self.winfo_toplevel().nametowidget('interface_admin').populate_interface_box()
         super().Cancel()
@@ -493,7 +504,7 @@ class New_Interface_DLG_Class(MyFrame):
         # self.input_frame.nametowidget('field_length').delete(0, tk.END)
         # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
-        self.input_frame.nametowidget('field_order').delete(0, tk.END)
+        #self.input_frame.nametowidget('field_order').delete(0, tk.END)
         self.input_frame.nametowidget('field_type').reset()
         self.Checkbox_var.set(0)
 
@@ -524,7 +535,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
     def update_interface(self):
 
-        record_ID = {'column_name': 'Interface_Name', 'value':self.current_interface_name, 'type':'string'}
+        record_ID = {'column_name': 'interface_name', 'value':self.current_interface_name, 'type':'string'}
         columns_to_update = []
         update_interface_info = False
         #check if interface name has changed
@@ -536,27 +547,23 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
 
             one_column_to_update = {}
-            one_column_to_update['column_name'] = 'Interface_Name'
+            one_column_to_update['column_name'] = 'interface_name'
             one_column_to_update['type'] = 'string'
             one_column_to_update['value'] = interface_name
             self.Database_Obj.update_one_record(
-                'Interface_Fields', record_ID, [one_column_to_update])
+                'interface_fields', record_ID, [one_column_to_update])
 
             columns_to_update.append(one_column_to_update)
 
             self.current_interface_name = interface_name
             update_interface_info = True
-            # if self.Database_Obj.change_interface_name(
-            #         self.current_interface_name, interface_name) == 'Error':
-            #     messagebox.ERROR('Error', 'Problem making the table')
-            #     return
-            
+
 
         #check if table name has changed
         table_name = self.input_frame.nametowidget('table_name').get()
         if not table_name == self.current_table_name:
             one_column_to_update = {}
-            one_column_to_update['column_name'] = 'Interface_Table'
+            one_column_to_update['column_name'] = 'interface_table'
             one_column_to_update['type'] = 'string'
             one_column_to_update['value'] = table_name
             columns_to_update.append(one_column_to_update)
@@ -575,7 +582,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
         if not record_name_formula == self.current_name_formula:
             one_column_to_update = {}
-            one_column_to_update['column_name'] = 'Record_Name_Formula'
+            one_column_to_update['column_name'] = 'record_name_formula'
             one_column_to_update['type'] = 'string'
             one_column_to_update['value'] = record_name_formula
             columns_to_update.append(one_column_to_update)
@@ -589,7 +596,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
         
         if update_interface_info:
             self.Database_Obj.update_one_record(
-                'Interfaces', record_ID, columns_to_update)
+                'interfaces', record_ID, columns_to_update)
 
         #check if there are new fields
         fields_from_multibox = self.FieldList.get_all_records()
@@ -599,19 +606,21 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
         for one_field in fields_from_multibox:
             if not(one_field in self.current_interface_info):    
-                fields_to_remove = fields_to_remove + [x for x in self.current_interface_info if x.name==one_field.name]
+                fields_to_remove = fields_to_remove + \
+                    [x for x in self.current_interface_info if x['field_name']
+                        == one_field['field_name']]
                 new_fields.append(one_field)
                 self.current_interface_info.append(one_field)
 
         #check if fields were removed.
         
         for one_field in self.current_interface_info:
-            if next((x for x in fields_from_multibox if x.name == one_field.name), None) == None:
+            if next((x for x in fields_from_multibox if x['field_name'] == one_field['field_name']), None) == None:
                 fields_to_remove.append(one_field)
 
         if not fields_to_remove == []:
             if self.Database_Obj.remove_fields_interface(self.current_interface_name,
-                    self.current_table_name, [x.name for x in fields_to_remove]) == 'Error':
+                                                         self.current_table_name, [x['field_name'] for x in fields_to_remove]) == 'Error':
                 messagebox.showerror('Error', 'Error removing fields')
                 return
 
@@ -634,10 +643,10 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
     
     def set_current_interface_info(self, interface_records, interface_info):
         
-        self.current_name_formula= interface_info['Record_Name_Formula']
-        self.record_name_formula = interface_info['Record_Name_Formula']
-        self.current_interface_name = interface_records[0]['Interface_Name']
-        self.current_table_name = interface_info['Interface_Table']
+        self.current_name_formula= interface_info['record_name_formula']
+        self.record_name_formula = interface_info['record_name_formula']
+        self.current_interface_name = interface_records[0]['interface_name']
+        self.current_table_name = interface_info['interface_table']
 
         self.current_interface_info = []
 
@@ -656,12 +665,14 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
             if one_item['immutable']==0:
                 is_mutable = 'No'
 
-            one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'],
-                                            one_item['Field_Type'],  one_item['Field_Order'], one_item['Linked_Table'], is_mutable)
-            # one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'], one_item['Field_Type'],
+            # one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'],
+            #                                 one_item['Field_Type'],  one_item['Field_Order'], one_item['Linked_Table'], is_mutable)
+            # # one_field = InterfaceFieldClass(one_item['Field_Name'], one_item['Field_Lable'], one_item['Field_Type'],
             #                                 one_item['Field_Length'], one_item['Field_Order'], one_item['Linked_Table'], one_item['Immutable'])
-            self.FieldList.add_one_record(one_field)
-            self.current_interface_info.append(one_field)
+            del one_item['Record_ID']
+            del one_item['interface_name']
+            self.FieldList.add_one_record(one_item)
+            self.current_interface_info.append(one_item)
 
 
 class BuildName_DLG_Class(tk.Toplevel):

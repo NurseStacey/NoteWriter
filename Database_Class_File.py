@@ -1,4 +1,5 @@
 import mysql.connector
+from template import *
 
 class MyDatabaseClass():
 
@@ -11,7 +12,7 @@ class MyDatabaseClass():
         return self.the_db.cursor()
 
     def get_interface_names(self):
-        _SQL = "SELECT DISTINCT Interface_Name from interfaces"
+        _SQL = "SELECT DISTINCT interface_name from interfaces"
 
         try:
             mycursor = self.get_cursor()
@@ -54,8 +55,8 @@ class MyDatabaseClass():
         if new_name in self.get_interface_names():
             return('Duplicate')
 
-        _SQL = "UPDATE interfaces SET Interface_Name =" + chr(34) + \
-             new_name + chr(34) +" WHERE Interface_Name = " + chr(34) + old_name + chr(34) 
+        _SQL = "UPDATE interfaces SET interface_name =" + chr(34) + \
+             new_name + chr(34) +" WHERE interface_name = " + chr(34) + old_name + chr(34) 
         
         try:
             mycursor = self.get_cursor()
@@ -64,8 +65,8 @@ class MyDatabaseClass():
             print("Something went wrong: {}".format(err))
             return 'Error'
 
-        _SQL = "UPDATE interface_fields SET Interface_Name =" + chr(34) + \
-             new_name + chr(34) +" WHERE Interface_Name = " + chr(34) + old_name + chr(34) 
+        _SQL = "UPDATE interface_fields SET interface_name =" + chr(34) + \
+             new_name + chr(34) +" WHERE interface_name = " + chr(34) + old_name + chr(34) 
         
         try:
             mycursor = self.get_cursor()
@@ -126,11 +127,15 @@ class MyDatabaseClass():
         _SQL += ") VALUES ("  
 
         for index in range(len(field_type)):
-            if field_type[index] == 'string':
+            if field_type[index] in [ 'string', 'text']:
                 _SQL += chr(34)
                 _SQL +=field_data[index]
                 _SQL += chr(34)
-            elif field_type[index] in ['double','integer']:
+            elif field_type[index] in ['date']:
+                _SQL += chr(34)
+                _SQL += field_data[index].strftime('%Y-%m-%d %H:%M:%S')
+                _SQL += chr(34)
+            elif field_type[index] in ['double','integer', 'bool', 'linked_table']:
                 _SQL += str(field_data[index])
             _SQL += ", "
 
@@ -150,17 +155,18 @@ class MyDatabaseClass():
     def add_new_interface(self,interface_name, table_name, record_name_formula, all_fields):
 
         field_data = []
+
         for one_field in all_fields:
-                
+
             field_data.append((interface_name, 
-                            one_field.name,
-                            one_field.label,
-                            int(one_field.order),
-                            one_field.type,
-                            one_field.linked_table,
-                           one_field.immutable=='Yes'))
+                            one_field['field_name'],
+                               one_field['field_label'],
+                              one_field['order'],
+                               one_field['field_type'],
+                               one_field['linked_table'],
+                               one_field['immutable'] == 'Yes'))
         
-        _SQL = "INSERT INTO interface_fields (Interface_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Linked_Table, Immutable) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table, immutable) VALUES (%s, %s, %s, %s, %s, %s, %s)"
 
         try:
             mycursor = self.get_cursor()
@@ -170,7 +176,7 @@ class MyDatabaseClass():
             print("Something went wrong: {}".format(err))
             return 'Error'
         
-        _SQL = "INSERT INTO interfaces (Interface_Name, Record_Name_Formula, Interface_Table) VALUES ("
+        _SQL = "INSERT INTO interfaces (interface_name, record_name_formula, Interface_Table) VALUES ("
         #%s, %s, %s)"
         _SQL += chr(34)
         _SQL += interface_name
@@ -198,13 +204,31 @@ class MyDatabaseClass():
 
     def add_new_table(self, table_name, all_fields):
 
+        linked_fields=[]
+
         _SQL = 'CREATE TABLE ' + table_name + ' (Record_ID int NOT NULL AUTO_INCREMENT, '       
 
         for one_field in all_fields:
+            
+            if one_field['field_type']=='linked_table':
+                linked_fields.append(one_field)            
+            
             _SQL += self.one_new_field_query_string(one_field)
 
-        #_SQL = _SQL[0:len(_SQL)-2]
-        _SQL += 'PRIMARY KEY (Record_ID))'
+
+        _SQL += 'PRIMARY KEY (Record_ID)'
+
+        for one_linked_table in linked_fields:
+            this_interface_info = self.get_interface_info(one_linked_table['linked_table'])
+
+            _SQL += ', FOREIGN KEY ('
+            _SQL +=one_linked_table['field_name']
+            _SQL +=')  REFERENCES '
+            _SQL += this_interface_info['interface_table']
+            _SQL +='(Record_ID)'
+        
+        _SQL += ')'
+
         try:
             mycursor = self.get_cursor()
             mycursor.execute(_SQL)
@@ -217,28 +241,58 @@ class MyDatabaseClass():
     def one_new_field_query_string(self, one_field):
 
         _SQL = ''
-        if one_field.type == 'string':
-            _SQL += one_field.name
+        if one_field['field_type'] == 'string':
+            _SQL += one_field['field_name']
             _SQL += ' VARCHAR(255)'
             # _SQL += str(one_field.length)
             _SQL += ', '
-        elif one_field.type == 'text':
-            _SQL += one_field.name
+        elif one_field['field_type'] == 'text':
+            _SQL += one_field['field_name']
             _SQL += ' MEDIUMTEXT, '
-        elif one_field.type == 'integer':
-            _SQL += one_field.name
+        elif one_field['field_type'] == 'integer':
+            _SQL += one_field['field_name']
             _SQL += ' SMALLINT, '
-        elif one_field.type == 'double':
-            _SQL += one_field.name
+        elif one_field['field_type'] == 'double':
+            _SQL += one_field['field_name']
             _SQL += ' FLOAT(10,4), '
-        elif one_field.type == 'date':
-            _SQL += one_field.name
+        elif one_field['field_type'] == 'date':
+            _SQL += one_field['field_name']
             _SQL += ' DATETIME, '
-        elif one_field.type == 'bool':
-            _SQL += one_field.name
+        elif one_field['field_type'] == 'bool':
+            _SQL += one_field['field_name']
             _SQL += ' BOOL, '
-
+        elif one_field['field_type'] == 'linked_table':
+            _SQL += one_field['field_name']
+            _SQL += ' int, '
         return _SQL
+
+    # def one_new_field_query_string(self, one_field):
+
+    #     _SQL = ''
+    #     if one_field.type == 'string':
+    #         _SQL += one_field.name
+    #         _SQL += ' VARCHAR(255)'
+    #         # _SQL += str(one_field.length)
+    #         _SQL += ', '
+    #     elif one_field.type == 'text':
+    #         _SQL += one_field.name
+    #         _SQL += ' MEDIUMTEXT, '
+    #     elif one_field.type == 'integer':
+    #         _SQL += one_field.name
+    #         _SQL += ' SMALLINT, '
+    #     elif one_field.type == 'double':
+    #         _SQL += one_field.name
+    #         _SQL += ' FLOAT(10,4), '
+    #     elif one_field.type == 'date':
+    #         _SQL += one_field.name
+    #         _SQL += ' DATETIME, '
+    #     elif one_field.type == 'bool':
+    #         _SQL += one_field.name
+    #         _SQL += ' BOOL, '
+    #     elif one_field.type == 'linked_table':
+    #         _SQL += one_field.name
+    #         _SQL += ' int, '
+    #     return _SQL
 
     def add_new_fields(self, table_name, new_fields):
 
@@ -302,7 +356,7 @@ class MyDatabaseClass():
 
     def update_interface(self, old_interface_name, interface_name, table_name, record_name_formula):
 
-        _SQL = 'DELETE FROM interfaces WHERE Interface_Name= '
+        _SQL = 'DELETE FROM interfaces WHERE interface_name= '
 
 
 
@@ -314,7 +368,7 @@ class MyDatabaseClass():
             print("Something went wrong: {}".format(err))
             return 'Error'
 
-        _SQL = "INSERT INTO interfaces (Interface_Name, Record_Name_Formula, Interface_Table) VALUES"
+        _SQL = "INSERT INTO interfaces (interface_name, record_name_formula, interface_table) VALUES"
         
         _SQL += '('
         _SQL += chr(34)
@@ -350,14 +404,14 @@ class MyDatabaseClass():
         for one_field in new_fields:
                 
             field_data.append((interface_name, 
-                            one_field.name,
-                            one_field.label,
-                            int(one_field.order),
-                            one_field.type,
-                            one_field.linked_table,
-                           one_field.immutable=='Yes'))
+                            one_field['field_name'],
+                               one_field['field_label'],
+                            int(one_field['order']),
+                            one_field['field_type'],
+                            one_field['linked_table'],
+                           one_field['immutable']=='Yes'))
         
-        _SQL = "INSERT INTO interface_fields (Interface_Name, Field_Name, Field_Lable, Field_Order, Field_Type, Linked_Table, Immutable) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table, immutable) VALUES (%s, %s, %s, %s, %s, %s, %s)"
 
         try:
             mycursor = self.get_cursor()
@@ -366,9 +420,6 @@ class MyDatabaseClass():
         except mysql.connector.Error as err:
             print("Something went wrong: {}".format(err))
             return 'Error'
-
-        # if self.add_new_interface(interface_name, table_name, interface_name_formula, new_fields) == 'Error':
-        #     return 'Error'
 
         return 'No_Error'
 
@@ -397,7 +448,7 @@ class MyDatabaseClass():
             return 'Error'
 
         for one_field in fields_to_remove:
-            _SQL = 'DELETE FROM interface_fields WHERE field_Name= '
+            _SQL = 'DELETE FROM interface_fields WHERE field_name= '
             _SQL += chr(34)
             _SQL += one_field
             _SQL += chr(34)
@@ -431,11 +482,11 @@ class MyDatabaseClass():
         return 'No_Error'
         
     def delete_interface(self, which_interface):
-        _SQL = "SELECT Interface_Table from interfaces WHERE Interface_Name="
+        _SQL = "SELECT interface_table from interfaces WHERE interface_name="
         _SQL += chr(34)
         _SQL += which_interface
         _SQL += chr(34)
-        _SQL += " GROUP BY Interface_Table"
+        _SQL += " GROUP BY interface_table"
 
         mycursor = self.get_cursor()
         mycursor.execute(_SQL)
@@ -445,7 +496,7 @@ class MyDatabaseClass():
             if self.delete_table(one_table)=='Error':
                 return 'Error'
 
-        _SQL = 'DELETE FROM interface_fields WHERE Interface_Name= '
+        _SQL = 'DELETE FROM interface_fields WHERE interface_name= '
         _SQL += chr(34)
         _SQL += which_interface
         _SQL += chr(34)
@@ -459,9 +510,39 @@ class MyDatabaseClass():
 
         return 'No_Error'
 
+    def get_record_names(self, which_interface, record_name_formula):
+
+        record_values = []
+        fields_needed = get_fields_for_record_name_formula(record_name_formula)
+
+        _SQL = "SELECT Record_ID, "
+        for one_field in fields_needed:
+            _SQL += one_field
+            _SQL += ','
+
+        _SQL = _SQL[0:len(_SQL)-1]
+
+        _SQL += ' from '
+        _SQL += which_interface
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+        records = mycursor.fetchall()
+        columnNames = [column[0] for column in mycursor.description]
+
+        for one_record in records:
+            record_values.append(dict(zip(columnNames, one_record)))
+
+        return get_names(record_values, record_name_formula)
+
     def get_interface_info(self, which_interface):
 
-        _SQL = "SELECT * from interfaces WHERE Interface_Name="
+        _SQL = "SELECT * from interfaces WHERE interface_name="
         _SQL += chr(34)
         _SQL += which_interface
         _SQL += chr(34)
@@ -477,11 +558,11 @@ class MyDatabaseClass():
 
     def get_interface_records(self, which_interface):
 
-        _SQL = "SELECT * from interface_fields WHERE Interface_Name="
+        _SQL = "SELECT * from interface_fields WHERE interface_name="
         _SQL += chr(34)
         _SQL += which_interface
         _SQL += chr(34)
-        _SQL += ' ORDER BY Field_Order'
+        _SQL += ' ORDER BY field_order'
 
         mycursor = self.get_cursor()
         #mycursor = self.get_cursor(dictionary=True)

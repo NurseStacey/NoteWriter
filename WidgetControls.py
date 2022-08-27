@@ -140,7 +140,7 @@ class TextScrollCombo(tk.Frame):
 
         self.the_state = tk.NORMAL
 
-    def gettext(self):
+    def get(self):
         # I seem to always get an extra '\n' this is how I'm correcting this
         temp=self.txt.get("1.0", tk.END)
         return temp[:len(temp)-1]
@@ -177,71 +177,70 @@ class My_List_Box(tk.Listbox):
         self.this_column = this_column
 
 class MyMultiListBox(tk.Frame):
-    def __init__(self, record_class, fields_to_include, include_forward_backward, *args, **kwargs):
+    def __init__(self, fields, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
-        self.record_class = record_class
-        #temp = self.record_class()
-        self.fields_to_include = fields_to_include
-        headers = []
+        self.image_object = Image_Class(os.getcwd())
+        
 
-        #for attribute in  vars(temp):
-        for attribute in vars(record_class)['__annotations__']:
-            #if not (callable(getattr(temp, attribute))) and not attribute.startswith('__') and 
-            if attribute in self.fields_to_include:
-                headers.append(attribute)
+        self.fields = fields
 
         self.selection_mode_multi = False
         self.which_last_sort = ''
         self.direction_last_sort = -1
 
-        self.number_columns = len(headers)
+        self.number_columns = len(fields)
         self.list_boxes = []
-        #self.list_box_grid_info = []
-        self.header_button = []
-
+        self.header_labels = []
+        #self.header_button = []
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        if(include_forward_backward):
-            forward_button = tk.Button(self, text='Jump Forward', width=10, height=6,
-                                    font=font_return(16), wraplength=90,
-                                    command=lambda: self.scrolljump(1))
-            forward_button.grid(row=2, column=2)
-            spacer = tk.Label(self, text='')
+        tk.Label(self, text=' ').grid(row=1, column=2)
+        tk.Button(self, image=self.image_object.double_up, command=lambda: self.shift(
+            'double_up')).grid(row=2, column=2, sticky='n')
 
-            backward_button = tk.Button(self, text='Jump Backward', width=10, height=6,
-                                    font=font_return(16), wraplength=90,
-                                    command=lambda: self.scrolljump(-1))
-            backward_button.grid(row=1, column=2)
+        tk.Button(self, image=self.image_object.up, command=lambda: self.shift(
+            'up')).grid(row=3, column=2, sticky='n')
+
+        tk.Button(self, image=self.image_object.down, command=lambda: self.shift(
+            'down')).grid(row=4, column=2, sticky='s')
+
+        tk.Button(self, image=self.image_object.double_down, command=lambda: self.shift(
+            'double_down')).grid(row=5, column=2, sticky='s')
 
         self.listboxframe = tk.Frame(self)
         self.listboxframe.grid_rowconfigure(0, weight=1)
         self.listboxframe.grid_columnconfigure(0, weight=1)
-        self.listboxframe.grid(row=1, column=1, rowspan=2)
+        self.listboxframe.grid(row=1, column=1, rowspan=5)
 
         self.the_scrollbar = tk.Scrollbar(self.listboxframe)
         self.the_scrollbar.config(command=self.yview)
 
 
         this_row = 0
-        for x in range(self.number_columns):
-            temp = tk.Button(self.listboxframe, anchor='w', takefocus=False, text=headers[x].capitalize(
-            ), name=headers[x] + 'button', command=lambda y=headers[x]: self.sort(y))
-            temp.grid(row=this_row, column=x+1, sticky='news')
-            # temp.grid(row=this_row, column=x + 1)
-            self.header_button.append(temp)
-            temp = My_List_Box(this_row+1, x+1, self.listboxframe, takefocus=False,
-                               name=headers[x], exportselection=False, yscrollcommand=self.listboxscroll)  # need to add a command for scrolling)
+        this_column = 1
+        for one_field in fields:
+            temp = tk.Label(self.listboxframe, anchor='w', takefocus=False, text=one_field.capitalize(
+            ), name=one_field.lower() + 'label')
+            temp.grid(row=this_row, column=this_column, sticky='news')
+            self.header_labels.append(temp)
+            # temp = tk.Button(self.listboxframe, anchor='w', takefocus=False, text=one_field.capitalize(
+            # ), name=one_field + 'button', command=lambda y=one_field: self.sort(y))
+            # temp.grid(row=this_row, column=this_column, sticky='news')
+
+            #self.header_button.append(temp)
+            temp = My_List_Box(this_row+1, this_column, self.listboxframe, takefocus=False,
+                               name=one_field.lower(), selectmode=tk.SINGLE, exportselection=False, yscrollcommand=self.listboxscroll)  # need to add a command for scrolling)
             temp.config(yscrollcommand=self.listboxscroll)
             temp.bind('<<ListboxSelect>>', self.listboxclicked)
             
-            
-            temp.grid(row=this_row+1, column=x+1, sticky='news')
+            temp.grid(row=this_row+1, column=this_column, sticky='news')
 
             self.list_boxes.append(temp)
+            this_column+=1
 
         this_row = this_row + 1
 
@@ -256,19 +255,63 @@ class MyMultiListBox(tk.Frame):
 
         self.single_click=None
 
-    def set_single_click(self, function):
-        self.single_click = function
+    def shift(self, which):
+
+        selection = self.list_boxes[0].curselection()
+        if len(selection)==0:
+            return
+
+        selection = selection[0]
+
+        number_of_items = self.list_boxes[0].size()
+
+        if (which=='up' or which=='double_up') and selection==0:
+            return
+
+        if (which=='down' or which=='double_down') and selection==(number_of_items-1):
+            return
+
+        record_to_swap = 0
+        if which=='up':
+            record_to_swap=  selection - 1
+        if which=='down':
+            record_to_swap=  selection + 1
+        if which=='double_down':
+            record_to_swap=  number_of_items - 1
+
+        item_one = []
+        item_two = []
+
+        for one_list_box in self.list_boxes:
+            item_one.append(one_list_box.get(selection))
+            item_two.append(one_list_box.get(record_to_swap))
+
+        for index, one_list_box in enumerate(self.list_boxes):
+            one_list_box.delete(selection)
+            if which=='up' or which=='down':
+                one_list_box.insert(selection, item_two[index])
+                one_list_box.delete(record_to_swap)
+                
+            one_list_box.insert(record_to_swap, item_one[index])
+
+        self.set_selection_by_index(record_to_swap)
+
+    def set_selection_by_index(self, index):
+
+        for one_list_box in self.list_boxes:
+            one_list_box.select_set(index)
 
     def get_selection(self):
-
-        return self.list_boxes[0].curselection()
+        return self.list_boxes[0].curselection()[0]
 
     def set_state(self, the_state):
         for one_box in self.list_boxes:
             one_box.config(state=the_state)
 
-    def set_double_click(self,function):
+    def set_single_click(self, function):
+        self.single_click = function
 
+    def set_double_click(self,function):
         for one_listbox in self.list_boxes:
             one_listbox.bind('<Double-Button-1>', function)
 
@@ -281,8 +324,10 @@ class MyMultiListBox(tk.Frame):
         for one_list_box in self.list_boxes:
             one_list_box.config(font=this_font)
 
-        for one_button in self.header_button:
-            one_button.config(font=this_font)
+        for one_label in self.header_labels:
+            one_label.config(font=this_font)
+        # for one_button in self.header_button:
+        #     one_button.config(font=this_font)
 
     def get_widget(self, which):
         return(self.listboxframe.nametowidget(which))
@@ -296,28 +341,31 @@ class MyMultiListBox(tk.Frame):
         return self.listboxframe.nametowidget(which).get(self.listboxframe.nametowidget(which).curselection()[0])
 
     def get_current_selection(self):
-        return_value = []
+        return_value = {}
         field_names = []
 
         for one_box in self.list_boxes:
-            return_value.append(one_box.get(one_box.curselection()[0]))
-            field_names.append(one_box._name)
-
-        return dict(zip(field_names,return_value))
-
-    def get_current_selection_all(self, which):
-        selection_list = self.listboxframe.nametowidget(which).curselection()
-
-        return_value = []
-        for one_selection in selection_list:
-            return_value.append(self.listboxframe.nametowidget(which).get(one_selection))
+            return_value[one_box._name] = one_box.get(
+                one_box.curselection()[0])
+            # return_value.append(one_box.get(one_box.curselection()[0]))
+            # field_names.append(one_box._name)
 
         return return_value
+        #return dict(zip(field_names,return_value))
 
-    def change_button_text(self, buttonname, newbuttontext):
-        this_button = self.listboxframe.nametowidget(buttonname + 'button')
+    # def get_current_selection_all(self, which):
+    #     selection_list = self.listboxframe.nametowidget(which).curselection()
 
-        this_button['text'] = newbuttontext
+    #     return_value = []
+    #     for one_selection in selection_list:
+    #         return_value.append(self.listboxframe.nametowidget(which).get(one_selection))
+
+    #     return return_value
+
+    def change_lable_text(self, labelname, newlabletext):
+        this_label = self.listboxframe.nametowidget(labelname + 'label')
+
+        this_label['text'] = newlabletext
 
     def delete_one_item(self, which):
 
@@ -337,14 +385,14 @@ class MyMultiListBox(tk.Frame):
         if not self.single_click==None:
             self.single_click()
 
-    #if you are to allow multiple lines to be selected
-    def listboxclicked_multi(self, event=None):
+    # #if you are to allow multiple lines to be selected
+    # def listboxclicked_multi(self, event=None):
 
-        all_selections = event.widget.curselection()
-        for temp in self.list_boxes:
-            temp.select_clear(0, tk.END)
-            for which in all_selections:
-                temp.select_set(which)
+    #     all_selections = event.widget.curselection()
+    #     for temp in self.list_boxes:
+    #         temp.select_clear(0, tk.END)
+    #         for which in all_selections:
+    #             temp.select_set(which)
 
     def hide_column(self, which):
         self.listboxframe.nametowidget(which).grid_remove()
@@ -352,7 +400,8 @@ class MyMultiListBox(tk.Frame):
 
     def set_width(self, which, this_width):
         this_listbox = self.listboxframe.nametowidget(which)
-        this_button = self.listboxframe.nametowidget(which+'button')
+        #this_button = self.listboxframe.nametowidget(which+'button')
+        this_button = self.listboxframe.nametowidget(which+'label')
         this_listbox.grid(row=this_listbox.this_row, column=this_listbox.this_column)
         this_listbox.configure(width=this_width)
 
@@ -397,12 +446,15 @@ class MyMultiListBox(tk.Frame):
         
     def get_one_record(self, which):
         
-        this_record = []
-        for attribute in dataclasses.fields(self.record_class):
-            this_record.append(
-                self.listboxframe.nametowidget(attribute.name).get(which))
+        this_record = {}
 
-        return self.record_class(*this_record)
+        for one_box in self.list_boxes:
+            field_name = one_box._name
+            this_record[field_name] = one_box.get(which)
+
+
+        this_record['order']=which
+        return this_record
 
     def delete_one_record(self,which,value):
         index = self.listboxframe.nametowidget(which).get(0, tk.END).index(value)
@@ -411,28 +463,23 @@ class MyMultiListBox(tk.Frame):
     def get_values_in_column(self, which):
         return self.listboxframe.nametowidget(which).get(0, tk.END)
 
-        
     def add_one_record(self, record):
 
-        size = 0
-        for attribute, value in vars(record).items():
-            # if not (callable(getattr(record, attribute))) and not attribute.startswith('__'):
-                try:
-                    temp = self.listboxframe.nametowidget(attribute)
+        for one_box in self.list_boxes:
+            field_name = one_box._name
 
-                    if isinstance(value, datetime.date):
-                        text = value.strftime('%m/%d/%Y')
-                        temp.insert(tk.END, text)
-                    elif isinstance(value, bool):
-                        if value:
-                            temp.inser(tk.END,'Yes')
-                        else:
-                            temp.inser(tk.END,'No')
+            if field_name in record:
+                value = record[field_name]
+                if isinstance(value, datetime.date):
+                    text = value.strftime('%m/%d/%Y')
+                    one_box.insert(tk.END, text)
+                elif isinstance(value, bool):
+                    if value:
+                        one_box.insert(tk.END, 'Yes')
                     else:
-                        temp.insert(tk.END, value)
-
-                except KeyError:
-                    pass
+                        one_box.insert(tk.END, 'No')
+                else:
+                    one_box.insert(tk.END, value)
 
     def change_position(self, which, whereto):
         swap = ""
@@ -456,62 +503,55 @@ class MyMultiListBox(tk.Frame):
     def numberitems(self):
         return self.list_boxes[0].size()
 
-    def sort(self, which):
+    # def sort(self, which):
 
-        direction = 1
-        if which == self.which_last_sort:
-            direction = -1 * self.direction_last_sort
-        else:
-            self.which_last_sort = which
+    #     direction = 1
+    #     if which == self.which_last_sort:
+    #         direction = -1 * self.direction_last_sort
+    #     else:
+    #         self.which_last_sort = which
 
-        self.direction_last_sort = direction
+    #     self.direction_last_sort = direction
 
-        this_list_box = self.listboxframe.nametowidget(which)
+    #     this_list_box = self.listboxframe.nametowidget(which)
 
-        number_of_items = self.numberitems()
-        temporary_records = []
+    #     number_of_items = self.numberitems()
+    #     temporary_records = []
 
-        #element_names=vars(self.record_class())
-
-        for index in range(number_of_items):
+    #     for index in range(number_of_items):
             
-            this_record = []
-            for attribute in dataclasses.fields(self.record_class):
-                this_record.append(
-                    self.listboxframe.nametowidget(attribute.name).get(index))
-            #for attribute in element_names:
+    #         this_record = []
+    #         for attribute in dataclasses.fields(self.record_class):
+    #             this_record.append(
+    #                 self.listboxframe.nametowidget(attribute.name).get(index))
 
-             #   if not (callable(getattr(temp_record, attribute))) and not attribute.startswith('__') and attribute in self.fields_to_include:
-#                    this_value = self.listboxframe.nametowidget(attribute).get(index)
-#                    setattr(temp_record, attribute, this_value)
+    #         temporary_records.append(self.record_class(*this_record))
 
-            temporary_records.append(self.record_class(*this_record))
+    #     self.clear_list_boxes()
 
-        self.clear_list_boxes()
+    #     def sort_function(one_record):
+    #         nonlocal which
+    #         return getattr(one_record, which)
 
-        def sort_function(one_record):
-            nonlocal which
-            return getattr(one_record, which)
+    #     reverse_sort = not(self.direction_last_sort==1)
 
-        reverse_sort = not(self.direction_last_sort==1)
+    #     temporary_records.sort(key=sort_function, reverse=reverse_sort)
 
-        temporary_records.sort(key=sort_function, reverse=reverse_sort)
-
-        for one_record in temporary_records:
-            self.add_one_record(one_record)
+    #     for one_record in temporary_records:
+    #         self.add_one_record(one_record)
 
 
 
-    def set_selection_mode(self, which):
+    # def set_selection_mode(self, which):
 
-        if which == tk.MULTIPLE:
-            self.selection_mode_multi = True
-            for one_list_box in self.list_boxes:
-                one_list_box.config(selectmode=which)
-                one_list_box.bind('<<ListboxSelect>>', self.listboxclicked_multi)
-        else:
-            for one_list_box in self.list_boxes:
-                one_list_box.config(selectmode=which)
+    #     if which == tk.MULTIPLE:
+    #         self.selection_mode_multi = True
+    #         for one_list_box in self.list_boxes:
+    #             one_list_box.config(selectmode=which)
+    #             one_list_box.bind('<<ListboxSelect>>', self.listboxclicked_multi)
+    #     else:
+    #         for one_list_box in self.list_boxes:
+    #             one_list_box.config(selectmode=which)
 
     def clear_all_selections(self):
 
@@ -554,8 +594,8 @@ class MyEntry(tk.Frame):
                 validation_field_function = self.only_double      
             elif kwargs['validation_type'] == 'date':                
                 this_is_date = True
-                #validation_field_function = self.only_date
-                #validate_type='all'
+                validation_field_function = self.valid_date
+                validate_type = 'focusout'
             del kwargs['validation_type']
 
         super().__init__(*args, **kwargs)
@@ -574,15 +614,25 @@ class MyEntry(tk.Frame):
         self.Entry_Box.grid(row=0, column=0)
 
         if this_is_date:
-            self.Entry_Box.bind('<KeyRelease>', self.only_date)        
+            self.Entry_Box.bind('<KeyRelease>', self.only_date) 
+            self.date_is_valid = False
 
         self.allowed_charactors = [chr(i+ord('a')) for i in range(26)] +\
-            [chr(i+ord('A')) for i in range(26)] +\
-                ['_'] +\
+            ['_'] +\
             [chr(i+ord('0')) for i in range(10)]
+            # [chr(i+ord('A')) for i in range(26)] +\
+
 
         #for date validation
-        self.current_text = ''
+        
+
+    def valid_date(self, text):
+
+        if self.date_is_valid:
+            return True
+        else:
+            messagebox.showerror('error', 'That is not a valid date. Either clear the box or fix the date.')
+            return False
 
     def only_date(self, event):
 
@@ -592,7 +642,10 @@ class MyEntry(tk.Frame):
         text=self.Entry_Box.get()
         #nothing here
         if text == '':
+            self.date_is_valid = True
             return
+
+        self.date_is_valid = False
 
         last_char = text[len(text)-1:]
         if not last_char.isdigit():
@@ -673,6 +726,7 @@ class MyEntry(tk.Frame):
             text = text[0:6] + century + year
             self.Entry_Box.delete(0, tk.END)
             self.Entry_Box.insert(0, text)
+            self.date_is_valid = True
 
         #check year is valid - leap days
         if len(text)==10:
@@ -682,7 +736,11 @@ class MyEntry(tk.Frame):
 
             if int(month)==2 and int(day)==29:
                 if not(int(year)%4==0 and not int(year)==2000):
-                    messagebox.showerror('error', 'That is not a valid date')
+                    messagebox.showerror('error', 'That is not a valid date.')
+                    self.date_is_valid = False
+                    return
+
+            self.date_is_valid = True
 
 
         if len(text)>10:
@@ -920,7 +978,8 @@ class ListScrollComboTwo(tk.Frame):
         self.list_box_items = []
 
         for one_item in item_list:
-            self.list_box_items.append(one_item.lower())
+            #self.list_box_items.append(one_item.lower())
+            self.list_box_items.append(one_item)
             self.listbox.insert(tk.END, one_item)
 
     def get_all_selected_texts(self):
@@ -989,11 +1048,20 @@ class ListScrollComboTwo(tk.Frame):
 
     def clear_listbox(self):
         self.listbox.delete(0, tk.END)
+        self.list_box_items = []
 
     def remove_item(self, text):
 
+        if self.listbox.get(0, tk.END)==():
+            return
+
         ID = self.listbox.get(0, tk.END).index(text)
+
+        if ID<0:
+            return
+            
         self.listbox.delete(ID)
+        self.list_box_items.remove(text)
         
     def set_state(self, this_state):
         self.listbox.configure(state=this_state)
@@ -1002,3 +1070,41 @@ class ListScrollComboTwo(tk.Frame):
         self.listbox.selection_clear(0, tk.END)
         new_selection= self.listbox.get(0,tk.END).index(which)
         self.listbox.selection_set(new_selection)
+
+class ListScrollWithRecordID(ListScrollComboTwo):
+    def __init__(self, this_height, this_width, this_font, selection_made, *args, **kwargs):
+
+        super().__init__(this_height, this_width, this_font, selection_made, *args, **kwargs)
+
+    def add_item_list(self, item_list):
+        self.clear_listbox()
+        self.list_box_items = []
+
+        for one_item in item_list:
+            #self.list_box_items.append(one_item.lower())
+            self.list_box_items.append(one_item)
+            self.listbox.insert(tk.END, one_item['Name'])
+
+    def remove_item(self, item):
+        ID = self.listbox.get(0, tk.END).index(item['Name'])
+        self.listbox.delete(ID)
+        self.list_box_items.remove(item)        
+
+    def update_displayed_list(self):
+
+        self.listbox.delete(0, tk.END)
+
+        for x in self.list_box_items:
+            if x['Name'][:len(self.the_text)].lower() == self.the_text.lower():
+                self.listbox.insert(tk.END,  x['Name'])
+
+        self.listbox.selection_clear(0, tk.END)
+        self.listbox.selection_set(0)
+
+    def get_selected_ID(self):
+
+        selections = self.listbox.curselection()
+        if len(selections)==0:
+            return self.listbox.get(0)
+
+        return [x['Record_ID'] for x in self.list_box_items if x['Name'] == self.listbox.get(selections[0])]
