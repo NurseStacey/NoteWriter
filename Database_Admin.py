@@ -4,11 +4,6 @@ from dataclasses import dataclass
 from tkinter import messagebox
 from WidgetControls import *
 
-@dataclass
-class FieldClass:
-    name:str
-    type:str
-
 class Database_Admin_DLG_Class(MyFrame):
     def __init__(self, Database_Obj,  *args, **kwargs):
 
@@ -83,19 +78,6 @@ class New_Database_Table_DLG_Class(MyFrame):
         super().__init__(Database_Obj, *args, **kwargs)
         ####################
 
-        def type_chosen(e):
-            pass
-            # if self.input_frame.nametowidget(
-            #         'field_type').get_selected_text() in ['string']:
-            #     self.input_frame.nametowidget(
-            #         'field_length').set_state('normal')
-            #     self.input_frame.nametowidget(
-            #         'field_length').focus_set()
-            # else:
-            #     self.input_frame.nametowidget(
-            #         'field_length').set_state('disabled')
-
-
         self.Table_Name = '' 
 
         font_size = 24
@@ -109,24 +91,22 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         MyLabel(font_size,  self.input_frame, text='Field Type').grid(row=1, column=1)
 
-        MyLabel(font_size,   self.input_frame, text='Field\nLength').grid(row=1, column=2)
+        MyLabel(font_size,   self.input_frame, text='Required').grid(row=1, column=2)
 
         MyEntry(font_size,  self.input_frame, name='field_name',
                 validation_type='DB_string').grid(sticky='n', row=2, column=0, pady=(0, 10))
 
-        # MyDropDownBox(font_size, type_chosen, self.input_frame,
-        #               name='field_type').grid(sticky='n', row=2, column=1, pady=(0, 10))
-
-        ListScrollComboTwo(5, 20, 20, type_chosen, self.input_frame, name='field_type').grid(
+        ListScrollComboTwo(5, 20, 20, None, self.input_frame, name='field_type').grid(
             sticky='n', row=2, column=1, pady=(0, 10))
 
+        self.Required_checkbox_var = tk.IntVar()
+        MyCheckBox(self.input_frame, width=4, name='required', variable=self.Required_checkbox_var).grid(
+            row=2, column=2,  pady=(0, 10), padx=10)
+        self.Required_checkbox_var.set(0)
 
         self.input_frame.nametowidget('field_type').add_item_list(field_types)
 
-        # MyEntry(font_size,  self.input_frame, name='field_length',
-        #         validation_type='digit_only').grid(sticky='n', row=2, column=2, pady=(0, 10))
-
-        headers = ['name', 'type']
+        headers = ['field_name', 'field_type']
         self.FieldList = MyMultiListBox(
             headers, self.input_frame)
         self.FieldList.set_font_size(16)
@@ -161,28 +141,17 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         field_name = self.input_frame.nametowidget('field_name').get()
 
-        if self.FieldList.value_in_list('name', field_name):
+        if self.FieldList.value_in_list('field_name', field_name):
             messagebox.showerror('error', 'That field name already used')
             return
 
         field_type = self.input_frame.nametowidget(
             'field_type').get_selected_text()
-        # field_length=self.input_frame.nametowidget('field_length').get()
-        # if field_type=='string' and field_length=='':
-        #     messagebox.showerror('error', 'For strings we need a length')
-        #     return
 
-        # this_field = FieldClass(
-        #     field_name,
-        #     field_type,
-        #     # field_length
-        # )
         this_field={}
-        this_field['name']=field_name
-        this_field['type'] = field_type
+        this_field['field_name']=field_name
+        this_field['field_type'] = field_type
         
-        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
-        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         
         self.input_frame.nametowidget('field_type').reset()
@@ -191,6 +160,8 @@ class New_Database_Table_DLG_Class(MyFrame):
 
     def Add_Table(self):
         
+        required_table=(self.Required_checkbox_var.get() == 1)
+
         table_name = self.input_frame.nametowidget('table_name').get()
         table_list =self.Database_Obj.get_list_current_tables()
 
@@ -203,7 +174,7 @@ class New_Database_Table_DLG_Class(MyFrame):
             return
 
         all_fields = self.FieldList.get_all_records()
-        if self.Database_Obj.add_new_table(table_name, all_fields) == 'Error':
+        if self.Database_Obj.add_new_table(table_name, all_fields, required_table) == 'Error':
             messagebox.showerror('Error','Error adding table')
             return
 
@@ -216,8 +187,6 @@ class New_Database_Table_DLG_Class(MyFrame):
 
         self.input_frame.nametowidget('table_name').delete(0,tk.END)
         
-        # self.input_frame.nametowidget('field_length').delete(0, tk.END)
-        # self.input_frame.nametowidget('field_length').set_state('normal')
         self.input_frame.nametowidget('field_name').delete(0, tk.END)
         
     def Cancel(self):
@@ -261,7 +230,7 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
 
         new_fields = []
         for one_field in fields_from_multibox:
-            if next((x for x in self.current_table_info if x['name'] == one_field['name']), None) == None:
+            if next((x for x in self.current_table_info if x['field_name'] == one_field['field_name']), None) == None:
                 new_fields.append(one_field)
 
         if not new_fields == []:
@@ -273,12 +242,12 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
         #check if fields were removed.
         fields_to_remove = []
         for one_field in self.current_table_info:
-            if next((x for x in fields_from_multibox if x['name'] == one_field['name']), None) == None:
+            if next((x for x in fields_from_multibox if x['field_name'] == one_field['field_name']), None) == None:
                 fields_to_remove.append(one_field)
 
         if not fields_to_remove == []:
             if self.Database_Obj.remove_fields(
-                    self.current_table_name,  [x.name for x in fields_to_remove]) == 'Error':
+                    self.current_table_name,  [x['field_name'] for x in fields_to_remove]) == 'Error':
                 messagebox.showerror('Error', 'Error removing fields')
                 return
 
@@ -303,7 +272,6 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
         for one_item in table_info:
             field_name = one_item[0]
             field_type_temp = one_item[1].decode('utf-8')
-            # field_length = 0
 
             if field_type_temp == 'mediumtext':
                 field_type = 'text'
@@ -317,13 +285,9 @@ class Alter_Database_Table_DLG_Class(New_Database_Table_DLG_Class):
                 field_type = 'date'
             elif field_type_temp[:7] == 'varchar':
                 field_type = 'string'
-                # field_length = int(field_type_temp[8:len(
-                #     field_type_temp)-1])
 
-            #one_field = FieldClass(field_name, field_type, field_length)
-            #one_field = FieldClass(field_name, field_type)
             one_field={}
-            one_field['name']=field_name
+            one_field['field_name']=field_name
             one_field['field_type']=field_type
             self.current_table_info.append(one_field)
             self.FieldList.add_one_record(one_field)

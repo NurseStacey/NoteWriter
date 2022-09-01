@@ -1,0 +1,3 @@
+pt_record_id,Patient,0,linked_table,Patient Interface
+ph_number,Phone Number,1,string,
+ph_type,Phone Type,2,string,

@@ -1,15 +1,144 @@
 import mysql.connector
 from template import *
-
+from tkinter import messagebox
 class MyDatabaseClass():
 
     def __init__(self):
 
-        self.the_db = mysql.connector.connect(
-            host='localhost', user='root', password='B@rton', database='EHR')
+        try:
+            self.the_db = mysql.connector.connect(
+                host='localhost', user='root', password='B@rton', database='EHR')
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            mydb = mysql.connector.connect(
+              host="localhost",
+              user="root",
+              password="B@rton"
+            )
+
+            mycursor = mydb.cursor()
+
+            mycursor.execute("CREATE DATABASE EHR")
+            self.the_db = mysql.connector.connect(
+                host='localhost', user='root', password='B@rton', database='EHR')
+
+        self.check_needed_tables_interfaces()
+
+    def check_needed_tables_interfaces(self):
+        #check if required tables are present
+        table_names = self.get_table_names()
+
+        #get needed tables
+        self.needed_tables = []
+
+        try:
+            this_file = open('required_tables.txt', 'r')
+        except FileNotFoundError:
+            messagebox.showerror('Error', 'Error - Required Tables File is Missing')
+            return
+
+        for one_line in this_file.readlines():
+            one_table={}
+            one_table['name'] = one_line.partition('-')[0]
+            one_table['sql'] = one_line.partition('-')[2]
+            self.needed_tables.append(one_table)
+
+        this_file.close()
+
+        for one_needed_table in self.needed_tables:
+            if not one_needed_table['name'] in table_names:
+                if self.preform_SQL_statement(one_needed_table['sql'])=='Error':
+                    messagebox.showerror('Error', 'Error Creating Needed Tables')
+                    return('Error')
+
+        #get needed interfaces
+        self.needed_interfaces = []
+        try:
+            this_file = open('required_interfaces.txt', 'r')
+        except FileNotFoundError:
+            return            
+        
+        for one_line in this_file.readlines():
+            one_line=one_line.replace('\n','')
+            if one_line=='':
+                break
+            
+            one_interface = {}
+            interface_data = one_line.split(',')
+
+            one_interface['interface_name'] = interface_data[0]
+            one_interface['record_name_formula'] =interface_data[1]
+            one_interface['table_name'] =interface_data[2]
+            self.needed_interfaces.append(one_interface)
+
+        this_file.close()
+
+
+
+        interface_names = self.get_interface_names()
+
+        for one_interface in self.needed_interfaces:
+            if not one_interface['interface_name'] in interface_names:
+                the_fields = self.get_required_interface_fields(
+                    one_interface['interface_name'])
+                if self.add_new_interface(one_interface['interface_name'], one_interface['table_name'], one_interface['record_name_formula'], the_fields, True) == 'Error':
+                    messagebox.showerror(
+                        'Error', 'Error Creating Needed Interfaces')
+                    return('Error')
+
+    def Is_Table_Required(self, table_name):
+        if [x for x in self.needed_tables if x['name']==table_name] == []:
+            return False
+        else: return True
+
+    def Is_Interface_Required(self, interface_name):
+        if [x for x in self.needed_interfaces if x['interface_name'] == interface_name] == []:
+            return False
+        else: return True
+
+    def get_required_interface_fields(self, interface_name):
+        this_file = open(interface_name+'.txt', 'r')
+
+        return_values = []
+        for one_line in this_file.readlines():
+            this_field = {}
+            one_line_data = one_line.split(',')
+            this_field['field_name'] = one_line_data[0]
+            this_field['field_label'] = one_line_data[1]
+            this_field['field_order'] = int(one_line_data[2])
+            this_field['field_type'] = one_line_data[3]
+            this_field['linked_table'] = one_line_data[4]
+            return_values.append(this_field)
+        
+        return return_values
+
+
+    def preform_SQL_statement(self, _SQL):
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+        return 'No Error'
 
     def get_cursor(self):
         return self.the_db.cursor()
+
+    def get_table_names(self):
+
+        _SQL = "SELECT table_name FROM information_schema.tables"
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+        results = mycursor.fetchall()
+        return [item[0] for item in results]
 
     def get_interface_names(self):
         _SQL = "SELECT DISTINCT interface_name from interfaces"
@@ -152,7 +281,11 @@ class MyDatabaseClass():
         
         return 'No_Error'
 
-    def add_new_interface(self,interface_name, table_name, record_name_formula, all_fields):
+    def add_new_interface(self, interface_name, table_name, record_name_formula, all_fields, required_table):
+        this_file=None
+        if required_table:
+            file_name=interface_name + '.txt'
+            this_file = open(file_name,'w')
 
         field_data = []
 
@@ -161,12 +294,27 @@ class MyDatabaseClass():
             field_data.append((interface_name, 
                             one_field['field_name'],
                                one_field['field_label'],
-                              one_field['order'],
+                              one_field['field_order'],
                                one_field['field_type'],
-                               one_field['linked_table'],
-                               one_field['immutable'] == 'Yes'))
+                               one_field['linked_table']))
+
+            if required_table:
+                this_file.write(one_field['field_name'])
+                this_file.write(',')
+                this_file.write(one_field['field_label'])
+                this_file.write(',')
+                this_file.write(str(one_field['field_order']))
+                this_file.write(',')
+                this_file.write(one_field['field_type'])
+                this_file.write(',')
+                this_file.write(one_field['linked_table'])
+                this_file.write('\n')
         
-        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table, immutable) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        if required_table:
+            this_file.close()
+
+        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table) VALUES (%s, %s, %s, %s, %s, %s)"
+
 
         try:
             mycursor = self.get_cursor()
@@ -199,10 +347,46 @@ class MyDatabaseClass():
             print("Something went wrong: {}".format(err))
             return 'Error'
 
+        if not required_table:
+            return 'No_Error'
+
+        try:
+            this_file = open('required_interfaces.txt', 'r')
+            all_lines = this_file.readlines()
+            this_file.close()
+        except IOError:
+            all_lines = []
+
+        this_file = open('required_interfaces.txt', 'w')
+        need_to_add = True
+
+        for one_line in all_lines:
+            if interface_name == one_line.partition(',')[0]:
+                this_file.write(interface_name)
+                this_file.write(',')
+                this_file.write(record_name_formula)
+                this_file.write(',')
+                this_file.write(table_name)
+                this_file.write('\n')
+                need_to_add = False
+            else:
+                this_file.write(one_line)
+
+        if need_to_add:
+            this_file.write(interface_name)
+            this_file.write(',')
+            this_file.write(record_name_formula)
+            this_file.write(',')
+            this_file.write(table_name)
+            this_file.write('\n')            
+
+
+        this_file.close()
+
         return 'No_Error'
  
 
-    def add_new_table(self, table_name, all_fields):
+    def add_new_table(self, table_name, all_fields, required_table):
 
         linked_fields=[]
 
@@ -232,9 +416,35 @@ class MyDatabaseClass():
         try:
             mycursor = self.get_cursor()
             mycursor.execute(_SQL)
+
         except mysql.connector.Error as err:
             print("Something went wrong: {}".format(err))
             return 'Error'
+
+        if not required_table:
+            return 'No_Error'
+
+        try:
+            this_file = open('required_tables.txt','r')
+            all_lines = this_file.readlines()
+            this_file.close()
+        except IOError:
+            all_lines=[]
+
+        this_file = open('required_tables.txt','w')
+        need_to_add = True
+
+        for one_line in all_lines:
+            if table_name == one_line.partition('-')[0]:
+                this_file.write(table_name + '-' + _SQL + '\n')
+                need_to_add = False
+            else:
+                this_file.write(one_line)
+
+        if need_to_add:
+            this_file.write(table_name + '-' + _SQL + '\n')
+
+        this_file.close()
 
         return 'No_Error'
 
@@ -261,7 +471,7 @@ class MyDatabaseClass():
         elif one_field['field_type'] == 'bool':
             _SQL += one_field['field_name']
             _SQL += ' BOOL, '
-        elif one_field['field_type'] == 'linked_table':
+        elif one_field['field_type'] in ['multi_linked_table','linked_table']:
             _SQL += one_field['field_name']
             _SQL += ' int, '
         return _SQL
@@ -387,7 +597,7 @@ class MyDatabaseClass():
 
         try:
             mycursor = self.get_cursor()
-            mycursor.executemany(_SQL, field_data)
+            mycursor.execute(_SQL)
             self.the_db.commit()
         except mysql.connector.Error as err:
             print("Something went wrong: {}".format(err))
@@ -406,12 +616,11 @@ class MyDatabaseClass():
             field_data.append((interface_name, 
                             one_field['field_name'],
                                one_field['field_label'],
-                            int(one_field['order']),
+                               int(one_field['field_order']),
                             one_field['field_type'],
-                            one_field['linked_table'],
-                           one_field['immutable']=='Yes'))
+                            one_field['linked_table']))
         
-        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table, immutable) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table) VALUES (%s, %s, %s, %s, %s, %s)"
 
         try:
             mycursor = self.get_cursor()
@@ -471,6 +680,10 @@ class MyDatabaseClass():
 
     def delete_table(self, which_table):
 
+        if self.Is_Table_Required(which_table):
+            messagebox.showerror('Error','Table is required.  Cannot be deleted')
+            return 'Error'
+
         _SQL = 'DROP TABLE ' + which_table
         try:
             mycursor = self.get_cursor()
@@ -482,6 +695,11 @@ class MyDatabaseClass():
         return 'No_Error'
         
     def delete_interface(self, which_interface):
+
+        if self.Is_Interface_Required(which_interface):
+            messagebox.showerror('Error','Interface is required.  Cannot be deleted')
+            return 'Error'
+
         _SQL = "SELECT interface_table from interfaces WHERE interface_name="
         _SQL += chr(34)
         _SQL += which_interface
@@ -504,6 +722,20 @@ class MyDatabaseClass():
         try:
             mycursor = self.get_cursor()
             mycursor.execute(_SQL)
+            self.the_db.commit()
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+        _SQL = 'DELETE FROM interfaces WHERE interface_name= '
+        _SQL += chr(34)
+        _SQL += which_interface
+        _SQL += chr(34)
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+            self.the_db.commit()
         except mysql.connector.Error as err:
             print("Something went wrong: {}".format(err))
             return 'Error'

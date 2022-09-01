@@ -3,7 +3,7 @@ from universal_components import *
 from dataclasses import dataclass
 from tkinter import messagebox
 from WidgetControls import *
-from Interface_Admin import InterfaceFieldClass
+#from Interface_Admin import InterfaceFieldClass
 from datetime import datetime
 
 class Interface_Select_DLG_Class(MyFrame):
@@ -107,48 +107,73 @@ class InterfaceDLG_New_Record_Class(MyFrame):
         self.the_field_names=[]
         self.these_widgets=[]
         self.Checkbox_var = {}
+        self.Scrolling_Frame = None
                 
     def create_frame(self):
         self.the_fields = self.Database_Obj.get_interface_records(
             self.the_interface)
 
         font_size = 24
-        this_row=1
+        
 
-        for one_field in self.the_fields:
+        self.Scrolling_Frame=ScrollingFrame(self.input_frame)
+        self.Scrolling_Frame.grid(row=0, column=0)
+        self.Build_These_Fields(
+            self.Scrolling_Frame.get_inner_frame(), font_size)
+
+
+        MyButton(font_size,  self.button_frame, text='Save Record',
+                 command=self.Save_Record, underline=0).grid(row=0, column=1, padx=40)
+        MyButton(font_size,  self.button_frame, text='Cancel',
+                 command=self.Cancel, underline=0).grid(row=0, column=2, padx=40)
+
+        self.winfo_toplevel().bind("<Alt-s>", self.Save_Record)
+        self.winfo_toplevel().bind("<Alt-c>", self.Cancel)
+
+    def Build_These_Fields(self, this_frame, font_size):
+
+        for this_row, one_field in enumerate(self.the_fields, start=1):
             self.the_field_names.append(one_field['field_name'])
-            temp = MyLabel(font_size,self.input_frame, text=one_field['field_label'])
-            temp.grid(row=this_row, column=1)
-            self.these_widgets.append(temp)
+
+            if not one_field['field_type']=='multi_linked_table':
+                temp = MyLabel(font_size, this_frame,
+                            text=one_field['field_label'])
+                temp.grid(row=this_row, column=1)
+                self.these_widgets.append(temp)
 
             if one_field['field_type'] == 'linked_table':
                 temp = ListScrollWithRecordID(
-                    5, 20, 20, None, self.input_frame, name=one_field['field_name'])
-                linked_interface_info = self.Database_Obj.get_interface_info(one_field['Linked_Table'])
+                    5, 20, 20, None, this_frame, name=one_field['field_name'])
+                linked_interface_info = self.Database_Obj.get_interface_info(
+                    one_field['Linked_Table'])
                 temp.add_item_list(
                     self.Database_Obj.get_record_names(linked_interface_info['interface_table'], linked_interface_info['Record_Name_Formula']))
             elif one_field['field_type'] == 'text':
-                temp = TextScrollCombo(self.input_frame, name=one_field['field_name'])
-                temp.config(width=150, height=100)
+                temp = TextScrollCombo(
+                    this_frame, name=one_field['field_name'])
+                temp.config(width=500, height=150)
+                temp.set_font(16)
 
             elif one_field['field_type'] == 'bool':
                 temp_var = tk.IntVar()
                 self.Checkbox_var[one_field['field_name']] = temp_var
-                temp = MyCheckBox(self.input_frame, width=4,
+                temp = MyCheckBox(this_frame, width=4,
                                   name=one_field['field_name'], variable=temp_var)
                 temp_var.set(0)
+            elif one_field['field_type']=='multi_linked_table':
+                temp = MyFrame(None, this_frame, font_size = font_size, name=one_field['field_name'], title_text=one_field['field_label'])
             else:
-                temp = MyEntry(font_size, self.input_frame, validation_type=one_field['field_type'], name=one_field['field_name'])
-
-            temp.grid(row=this_row, column=2)
+                temp = MyEntry(
+                    font_size, this_frame, validation_type=one_field['field_type'], name=one_field['field_name'], width=10)
+            
+            if not one_field['field_type']=='multi_linked_table':
+                temp.grid(row=this_row, column=2, sticky='W', pady=10)
+            else:
+                temp.grid(row=this_row, column=1, columnspan=2, pady=10)
 
             self.these_widgets.append(temp)
             this_row += 1
 
-        MyButton(font_size,  self.button_frame, text='Save Record',
-                 command=self.Save_Record).grid(row=0, column=1, padx=40)
-        MyButton(font_size,  self.button_frame, text='Cancel',
-                 command=self.Cancel).grid(row=0, column=2, padx=40)
 
     def Save_Record(self):
         

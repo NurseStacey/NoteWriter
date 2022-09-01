@@ -1,0 +1,2 @@
+one_field,String Field,0,string,
+field_two,Integer Field,1,integer,

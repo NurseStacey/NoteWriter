@@ -6,6 +6,7 @@ from tkinter import simpledialog
 import dataclasses
 from universal_components import *
 from tkinter import messagebox
+from tkinter import ttk
 
 class ListScrollCombo(tk.Frame):
     def __init__(self, show_forward_backward_buttons, this_height, this_width, this_font, *args, **kwargs):
@@ -140,6 +141,9 @@ class TextScrollCombo(tk.Frame):
 
         self.the_state = tk.NORMAL
 
+    def set_font(self, font_size):
+        self.txt.config(font=font_return(font_size))
+
     def get(self):
         # I seem to always get an extra '\n' this is how I'm correcting this
         temp=self.txt.get("1.0", tk.END)
@@ -227,11 +231,7 @@ class MyMultiListBox(tk.Frame):
             ), name=one_field.lower() + 'label')
             temp.grid(row=this_row, column=this_column, sticky='news')
             self.header_labels.append(temp)
-            # temp = tk.Button(self.listboxframe, anchor='w', takefocus=False, text=one_field.capitalize(
-            # ), name=one_field + 'button', command=lambda y=one_field: self.sort(y))
-            # temp.grid(row=this_row, column=this_column, sticky='news')
 
-            #self.header_button.append(temp)
             temp = My_List_Box(this_row+1, this_column, self.listboxframe, takefocus=False,
                                name=one_field.lower(), selectmode=tk.SINGLE, exportselection=False, yscrollcommand=self.listboxscroll)  # need to add a command for scrolling)
             temp.config(yscrollcommand=self.listboxscroll)
@@ -453,7 +453,7 @@ class MyMultiListBox(tk.Frame):
             this_record[field_name] = one_box.get(which)
 
 
-        this_record['order']=which
+        this_record['field_order']=which
         return this_record
 
     def delete_one_record(self,which,value):
@@ -625,10 +625,12 @@ class MyEntry(tk.Frame):
 
         #for date validation
         
+    # def set_width(self, width):
+    #     self.Entry_Box.config(width=width)
 
     def valid_date(self, text):
 
-        if self.date_is_valid:
+        if self.date_is_valid or text=='':
             return True
         else:
             messagebox.showerror('error', 'That is not a valid date. Either clear the box or fix the date.')
@@ -803,6 +805,11 @@ class MyFrame(tk.Frame):
             title_text = kwargs['title_text']
             del kwargs['title_text']
 
+        font_size=36
+        if 'font_size' in kwargs:
+            font_size = kwargs['font_size']
+            del kwargs['font_size']
+
         self.Database_Obj = Database_Obj
         super().__init__(*args, **kwargs)
 
@@ -813,7 +820,7 @@ class MyFrame(tk.Frame):
         self.title_frame.grid(row=0, column=1, pady=10, sticky='news')
         self.title_frame.grid_columnconfigure(0, weight=1)
         self.title_frame.grid_columnconfigure(2, weight=1)
-        MyLabel(36, self.title_frame, name='title',
+        MyLabel(font_size, self.title_frame, name='title',
                 text=title_text).grid(row=0, column=1)
 
         self.input_frame = tk.Frame(
@@ -944,6 +951,11 @@ class MyCheckBox(tk.Checkbutton):
         super().__init__(*args, **kwargs)
 
 
+class FunctionOnSelect():
+    def __init__(self, values, function_call):
+        self.function_call = function_call
+        self.values = values
+
 class ListScrollComboTwo(tk.Frame):
     def __init__(self, this_height, this_width, this_font, selection_made, *args, **kwargs):
 
@@ -954,7 +966,7 @@ class ListScrollComboTwo(tk.Frame):
                                   width=this_width, font=this_font, height=this_height, exportselection=0)
 
         self.listbox.bind('<KeyRelease>', self.key_pressed)
-
+        self.listbox.bind('<ButtonRelease-1>', self.selection_made)
         if not selection_made == None:
             self.listbox.bind('<FocusOut>', selection_made)
 
@@ -969,6 +981,10 @@ class ListScrollComboTwo(tk.Frame):
         self.the_text=''
         self.current_selection = 0
         self.listbox.selection_set(0)
+        self.function_on_select = []
+
+    def set_function_on_select(self, values, function):
+        self.function_on_select.append(FunctionOnSelect(values, function))
 
     def set_double_click(self, function):
         self.listbox.bind('<Double-Button-1>', function)
@@ -999,16 +1015,23 @@ class ListScrollComboTwo(tk.Frame):
 
         return self.listbox.get(selections[0])
 
+    def selection_made(self, e=None):
+
+        for one_select_function in self.function_on_select:
+            if self.get_selected_text() in one_select_function.values:
+                one_select_function.function_call()
+                
     def update_displayed_list(self):
 
         self.listbox.delete(0, tk.END)
         for x in self.list_box_items:
             if x[:len(self.the_text)].lower() == self.the_text:
                 self.listbox.insert(tk.END,  x)
-
         
         self.listbox.selection_clear(0, tk.END)
         self.listbox.selection_set(0)
+        self.selection_made()
+
 
     def set_selection_mode(self, which):
         self.listbox.config(selectmode=which)
@@ -1042,7 +1065,7 @@ class ListScrollComboTwo(tk.Frame):
         if e.char.isalpha():
             self.the_text += e.char
         elif e.keycode==8:
-            self.the_text = self.the_text[:max(0,len(self.the_text)-1)]
+            self.the_text = ''
 
         self.update_displayed_list()
 
@@ -1108,3 +1131,44 @@ class ListScrollWithRecordID(ListScrollComboTwo):
             return self.listbox.get(0)
 
         return [x['Record_ID'] for x in self.list_box_items if x['Name'] == self.listbox.get(selections[0])]
+
+
+class ScrollingFrame(ttk.Frame):
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.canvas = tk.Canvas(self)
+
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical",
+                                       command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+
+        self.canvas.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+
+        self.canvas.create_window(
+            (0, 0), window=self.scrollable_frame, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.grid(row=0, column=0, sticky='news')
+        self.scrollbar.grid(row=0, column=1, sticky='ns')
+
+        # this_file = open('fruit.txt', 'r')
+        # the_fruit = []
+
+        # for one_line in this_file.readlines():
+        #     the_fruit.append(one_line.replace('\n', ''))
+
+        # for index, one_fruit in enumerate(the_fruit):
+        #     tk.Label(self.scrollable_frame, text=one_fruit).grid(
+        #         row=index, column=1)
+
+    def get_inner_frame(self):
+
+        return self.scrollable_frame
