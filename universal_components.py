@@ -2,6 +2,10 @@ from tkinter import font as tkfont
 import os
 from PIL import Image, ImageTk
 
+field_names_not_allowed = [
+    'parent_id',
+]
+
 field_types = [
     "string",
     "text",

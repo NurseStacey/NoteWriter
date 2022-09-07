@@ -65,6 +65,18 @@ class Interface_Admin_DLG_Class(MyFrame):
         interface_list = interface_list_box.get_all_selected_texts()
 
         for one_interface in interface_list:
+            this_interface_info = self.Database_Obj.get_interface_info(one_interface)
+            if not this_interface_info['parent_interface']=='':
+                messagebox.showerror('Error', 'Cannot remove ' + one_interface +'.  Remove parent interface that links to it and it will be removed.')
+                interface_list.remove(one_interface)
+
+        counter = 0
+        while counter<len(interface_list):
+            interface_list = interface_list + \
+                self.Database_Obj.get_child_interface_names(interface_list[counter])
+            counter += 1
+
+        for one_interface in reversed(interface_list):
             if self.Database_Obj.delete_interface(one_interface) == 'Error':
                 messagebox.showerror('Error', 'Error removing interface')
                 return
@@ -91,6 +103,10 @@ class Interface_Admin_DLG_Class(MyFrame):
         self.populate_interface_box()
         super().tkraise()
 
+
+
+    
+
 class New_Interface_DLG_Class(MyFrame):
 
     def __init__(self, Database_Obj, *args, **kwargs):
@@ -101,20 +117,25 @@ class New_Interface_DLG_Class(MyFrame):
         ####################
 
         self.record_name_formula = ''
-        self.Table_Name = ''
         self.field_to_update = ''
         font_size = 18
         self.FieldList = None
         self.Required_checkbox_var = None
+        self.current_interface_name = ''
+        self.current_table_name = ''
 
         self.interface_name = ''
+
+        self.multi_value_frames = []
 
         self.build_input_frame(font_size)
   
         self.set_input_frame_columns(5)
 
-        self.build_buttond_frame(font_size)
-        
+        self.build_button_frame(font_size)
+        self.from_frame=''
+        self.parent_interface = ''
+
 
     def enable_edit_field_button(self):
         self.button_frame.nametowidget('edit_field').config(state='normal')
@@ -122,25 +143,31 @@ class New_Interface_DLG_Class(MyFrame):
 
     def Edit_Field(self, event=None):
         this_field = self.FieldList.get_current_selection()
+
         self.reset_all_fields()
 
         self.button_frame.nametowidget('edit_field').config(text='Update Field')
         self.button_frame.nametowidget('edit_field').config(command=self.Update_Field)
+        self.button_frame.nametowidget('add_interface_button').config(state='disabled')
         self.button_frame.nametowidget('cancel').config(command=self.Cancel_Field_Update)
+        self.button_frame.nametowidget('add_field').config(
+            state='disabled')
 
-        self.field_to_update = this_field['field_name']
+        self.input_frame.nametowidget('field_type').set_selection(this_field['field_type'])
+
+        self.field_to_update = this_field
         self.input_frame.nametowidget('field_name').insert(
             0, this_field['field_name'])
         self.input_frame.nametowidget(
             'field_label').insert(0, this_field['field_label'])
 
         linked_table = this_field['linked_table']
-        if not linked_table=='':
+        if not linked_table == '' and not this_field['field_type'] == 'multi_linked_table':
             self.input_frame.nametowidget['linked_table'].set_selection(
                 linked_table)
 
         self.FieldList.set_state('disabled')
-        self.winfo_toplevel().bind("<Alt-u>", self.Edit_Field)
+        self.winfo_toplevel().bind("<Alt-u>", self.Update_Field)
         self.winfo_toplevel().unbind("<Alt-e>")
 
     def Cancel_Field_Update(self):
@@ -152,6 +179,8 @@ class New_Interface_DLG_Class(MyFrame):
             'edit_field').config(command=self.Edit_Field)
         self.button_frame.nametowidget(
             'edit_field').config(text='Edit Field')
+        self.button_frame.nametowidget(
+            'add_interface_button').config(state='normal')
         self.button_frame.nametowidget(
             'edit_field').config(state='disabled')
         self.button_frame.nametowidget('cancel').config(
@@ -168,11 +197,8 @@ class New_Interface_DLG_Class(MyFrame):
         MyLabel(font_size,  self.input_frame,
                 text='Table Name').grid(row=this_row, column=4, columnspan=1, pady=(0, 10))
 
-        MyLabel(font_size,   self.input_frame,
-                text='Field Type').grid(row=this_row, column=5,  sticky='W', columnspan=2,  pady=(0, 10), padx=10)
-
-        MyLabel(font_size,   self.input_frame,
-                text='Linked Table').grid(row=this_row, column=7,  sticky='W', rowspan=1,  columnspan=1, pady=(0, 10), padx=10)
+        MyLabel(font_size,  self.input_frame,
+                text='Is Required').grid(row=this_row, column=7,  sticky='W',  columnspan=1,  padx=10)
 
         # row 2
         this_row += 1
@@ -182,22 +208,15 @@ class New_Interface_DLG_Class(MyFrame):
         MyEntry(font_size, self.input_frame, name='table_name',
                 validation_type='DB_string').grid(row=this_row, column=4,  columnspan=1,  pady=(0, 10), sticky='N')
 
-        ListScrollComboTwo(5, 20, 20, None, self.input_frame, name='field_type').grid(
-            row=this_row, column=5, columnspan=2, sticky='NW', pady=(0, 10), padx=10)
+        self.Required_checkbox_var = tk.IntVar()
+
+        self.Required_checkbox_var.set(0)
+
+        MyCheckBox(self.input_frame, width=4, name='required_interface', variable=self.Required_checkbox_var).grid(
+            row=this_row, column=7,  sticky='NW',  columnspan=1, pady=(0, 10), padx=10)
 
 
-        self.input_frame.nametowidget('field_type').add_item_list(field_types)
-
-        
-        self.input_frame.nametowidget('field_type').set_function_on_select(
-            field_types_with_linked_table, self.enable_linked_table)
-
-        self.input_frame.nametowidget('field_type').set_function_on_select(
-            field_types_without_linked_table, self.disable_linked_table)
-
-        ListScrollComboTwo(5, 20, 20, None, self.input_frame,
-                           name='linked_table').grid(row=this_row, column=7, sticky='NW', pady=(0, 10), padx=10)
-
+        # row 3
         this_row += 1
 
         MyLabel(font_size,   self.input_frame,
@@ -206,26 +225,56 @@ class New_Interface_DLG_Class(MyFrame):
         MyLabel(font_size,   self.input_frame,
                 text='Field Name').grid(row=this_row, column=4, columnspan=1, sticky='N')
 
-        MyLabel(font_size,  self.input_frame,
-                text='Is Required').grid(row=this_row, column=7,  sticky='W',  columnspan=1,  padx=10)
+        MyLabel(font_size,   self.input_frame,
+                text='Field Type').grid(row=this_row, column=5,  sticky='W', columnspan=2, pady=(0, 10), padx=10)
+
+        MyLabel(font_size,   self.input_frame,
+                text='Linked Table').grid(row=this_row, column=7,  sticky='W', rowspan=1, columnspan=1, pady=(0, 10), padx=10)
+
         # row 4
         this_row += 1
+
         MyEntry(font_size, self.input_frame, name='field_label').grid(
             row=this_row, column=2,  columnspan=1,  pady=(0, 10), sticky='N')
 
         MyEntry(font_size, self.input_frame, name='field_name',
                 validation_type='DB_string').grid(row=this_row, column=4,  columnspan=1, pady=(0, 10), sticky='N')
 
-        self.Required_checkbox_var = tk.IntVar()
-        MyCheckBox(self.input_frame, width=4, name='required_interface', variable=self.Required_checkbox_var).grid(
-            row=this_row, column=7,  sticky='NW',  columnspan=1, pady=(0, 10), padx=10)
-        self.Required_checkbox_var.set(0)
+        ListScrollComboTwo(5, 20, 20, None, self.input_frame, name='field_type').grid(
+            row=this_row, column=5, columnspan=2,  rowspan=3, sticky='NW', pady=(0, 10), padx=10)
 
-        # row 5
+        ListScrollComboTwo(5, 20, 20, None, self.input_frame,
+                           name='linked_table').grid(row=this_row,  rowspan=3, column=7, sticky='NW', pady=(0, 10), padx=10)
+
+        self.input_frame.nametowidget('field_type').add_item_list(field_types)
+
+        self.input_frame.nametowidget('field_type').set_function_on_select(
+            ['linked_table'], self.enable_linked_table)
+
+        self.input_frame.nametowidget('field_type').set_function_on_select(
+            ['multi_linked_table'], self.multi_linked_table)
+
+        self.input_frame.nametowidget('field_type').set_function_on_select(
+            field_types_without_linked_table, self.disable_linked_table)
+
+        # # row 5
+        this_row += 1
+        # MyLabel(font_size,   self.input_frame,
+        #         text='Linked Interface Name').grid(row=this_row, column=2, columnspan=1, sticky='N')
+
+        # # row 6
+        this_row += 1
+
+        # MyEntry(font_size, self.input_frame, name='new_linked_interface').grid(
+        #     row=this_row, column=2,  columnspan=1,  pady=(0, 10), sticky='N')
+        # self.input_frame.nametowidget('new_linked_interface').set_state('disabled')
+
+        # row 7
         this_row += 1
         MyLabel(font_size, self.input_frame,  text='Name Formula:', name='record_name_formula').grid(
             row=this_row, column=2, columnspan=5, sticky='NW', pady=(0, 10), padx=10)
-        # row 6
+
+        # row 8
         this_row += 1
 
         self.populate_interface_box()
@@ -257,22 +306,29 @@ class New_Interface_DLG_Class(MyFrame):
         self.FieldList.set_double_click(self.delete_record)
         self.FieldList.set_single_click(self.enable_edit_field_button)
 
+    def multi_linked_table(self):
+        self.input_frame.nametowidget('linked_table').set_state('disabled')
+        # self.input_frame.nametowidget(
+        #     'new_linked_interface').set_state('normal')
+
     def disable_linked_table(self):
         self.input_frame.nametowidget('linked_table').set_state('disabled')
+        #self.input_frame.nametowidget('new_linked_interface').set_state('disabled')
 
     def enable_linked_table(self):
         self.input_frame.nametowidget('linked_table').set_state('normal')
-        
+        # self.input_frame.nametowidget(
+        #     'new_linked_interface').set_state('disabled')
 
-    def build_buttond_frame(self, font_size):
+    def build_button_frame(self, font_size):
 
         column=1
-        MyButton(font_size,  self.button_frame, text='Add Field',
-                 command=self.Add_Field, underline=4).grid(row=0, column=column, padx=40)
+        MyButton(font_size,  self.button_frame, text='Add Field', name='add_field',
+                 command=self.Add_Field_Button_Clicked, underline=4).grid(row=0, column=column, padx=40)
 
         column += 1
         MyButton(font_size,  self.button_frame, text='Add Interface',
-                 name='add_interface_button', command=self.Add_Interface, underline=0).grid(row=0, column=column, padx=40)
+                 name='add_interface_button', command=self.Done, underline=0).grid(row=0, column=column, padx=40)
 
         column += 1
         MyButton(font_size,  self.button_frame,
@@ -292,7 +348,7 @@ class New_Interface_DLG_Class(MyFrame):
         self.set_button_frame_columns(column)
 
     def delete_record_to_update(self):
-        self.FieldList.delete_one_record('field_name', self.field_to_update)
+        self.FieldList.delete_one_record('field_name', self.field_to_update['field_name'])
         
 
     def Update_Field(self):
@@ -301,7 +357,17 @@ class New_Interface_DLG_Class(MyFrame):
         self.winfo_toplevel().unbind("<Alt-u>")
         
         self.FieldList.set_state('normal')
+        self.button_frame.nametowidget('add_field').config(
+            state='normal')
+
         self.delete_record_to_update()
+
+        for one_MV_interface in self.multi_value_frames:
+            if one_MV_interface._name == self.field_to_update['field_name']:
+                one_MV_interface.set_interface_name(self.input_frame.nametowidget(
+                    'field_label').get())
+                one_MV_interface.tkraise()
+            
         self.Add_Field()
 
         self.reset_edit_field_button()
@@ -326,12 +392,15 @@ class New_Interface_DLG_Class(MyFrame):
         self.input_frame.nametowidget('record_name_formula')[
             'text'] = 'Name Formula:' + new_formula
 
-    def tkraise(self):
-        self.winfo_toplevel().bind("<Alt-f>", self.Add_Field)
-        self.winfo_toplevel().bind("<Alt-i>", self.Add_Interface)
+    def do_binding(self):
+        self.winfo_toplevel().bind("<Alt-f>", self.Add_Field_Button_Clicked)
+        #self.winfo_toplevel().bind("<Alt-i>", self.Add_Interface)
         self.winfo_toplevel().bind("<Alt-c>", self.Cancel)
         self.winfo_toplevel().bind("<Alt-n>", self.create_name)
-        self.winfo_toplevel().bind("<Alt-a>", self.Add_Interface)
+        self.winfo_toplevel().bind("<Alt-a>", self.Done)
+
+    def tkraise(self):
+        self.do_binding()
         self.populate_interface_box()
         # self.input_frame.nametowidget('field_order').insert(0, '1')
         self.reset_edit_field_button()
@@ -348,53 +417,63 @@ class New_Interface_DLG_Class(MyFrame):
 
         linked_table_list_box = self.input_frame.nametowidget('linked_table')
         self.enable_linked_table()
-        self.input_frame.nametowidget(
-            'linked_table').add_item_list(interface_names)
+        linked_table_list_box.add_item_list(interface_names)
         self.disable_linked_table()
 
-    def Add_Interface(self, event=None):
+    def Validate(self, table_name, interface_name, is_required):
+
+        if self.record_name_formula.strip() == '':
+            messagebox.showerror('Error', 'Need a record name entered')
+            return 'Error'
+
+        if get_fields_for_record_name_formula(self.record_name_formula) == 0:
+            messagebox.showerror(
+                'Error', 'Must use at least one field in record name')
+            return 'Error'
+
+        if not table_name==self.current_table_name:
+            if table_name.strip() == '':
+                messagebox.showerror('Error', 'Need a table name entered')
+                return 'Error'
+
+            table_list = self.Database_Obj.get_list_current_tables()
+            if table_list == 'Error':
+                messagebox.showerror('Error', 'Not able to list of current tables')
+                return 'Error'
+
+            if table_name in table_list:
+                messagebox.showerror('error', 'That table name already used')
+                return 'Error'
+
+        if not self.current_interface_name==interface_name:
+            if interface_name.strip() == '':
+                messagebox.showerror('Error', 'Need an interface name entered')
+                return 'Error'
+
+            interface_list = self.Database_Obj.get_interface_names()
+            if interface_list == 'Error':
+                messagebox.showerror('Error', 'Not able to list of current interface')
+                return 'Error'
+
+            if interface_name in interface_list:
+                messagebox.showerror('error', 'That interface name already used')
+                return 'Error'
+
+
+    def Done(self, event=None):
 
         is_required = (self.Required_checkbox_var.get() == 1)
-
-        if self.record_name_formula.strip()=='':
-            messagebox.showerror('Error', 'Need a record name entered')
-            return
-
-        if get_fields_for_record_name_formula(self.record_name_formula)==0:
-            messagebox.showerror('Error', 'Must use at least one field in record name')
-            return
-
         table_name = self.input_frame.nametowidget('table_name').get()
-        if table_name.strip()=='':
-            messagebox.showerror('Error', 'Need a table name entered')
-            return
-        table_list = self.Database_Obj.get_list_current_tables()
-        if table_list=='Error':
-            messagebox.showerror('Error','Not able to list of current tables')
+        interface_name = self.input_frame.nametowidget(
+            'interface_name').get().strip()
+        if self.Validate(table_name, interface_name, is_required) == 'Error':
             return
 
-        if table_name in table_list:
-            messagebox.showerror('error', 'That table name already used')
-            return
+        self.Add_Interface(table_name, interface_name, is_required)
 
+        self.reset_frame()
 
-        interface_name = self.input_frame.nametowidget('interface_name').get().strip()
-        if interface_name.strip() == '':
-            messagebox.showerror('Error', 'Need an interface name entered')
-            return
-        #temp till I fix this code
-        all_fields = self.FieldList.get_all_records()
-        if self.Database_Obj.add_new_table(table_name, all_fields, False) == 'Error':
-            messagebox.showerror('Error', 'Error adding table')
-            return
-
-        if self.Database_Obj.add_new_interface(interface_name, table_name, self.record_name_formula, all_fields, is_required) == 'Error':
-            messagebox.showerror('Error', 'Error adding interface')
-            self.Database_Obj.delete_table(table_name)
-            return
-
-        self.FieldList.clear_list_boxes()
-
+    def reset_frame(self):
         self.input_frame.nametowidget('table_name').delete(0, tk.END)
         self.input_frame.nametowidget('interface_name').delete(0, tk.END)
 
@@ -404,42 +483,121 @@ class New_Interface_DLG_Class(MyFrame):
         self.input_frame.nametowidget('linked_table').reset()
         self.disable_linked_table()
 
-    def Add_Field(self, event=None):
+    def Add_Interface(self, table_name, interface_name, is_required):
+        #temp till I fix this code
+        all_fields = self.FieldList.get_all_records()
+        if self.Database_Obj.add_new_table(table_name, all_fields, False) == 'Error':
+            messagebox.showerror('Error', 'Error adding table')
+            return
 
-        field_name = self.input_frame.nametowidget('field_name').get()
-        field_type = self.input_frame.nametowidget('field_type').get_selected_text()
-        linked_table=''
-        if field_type in field_types_with_linked_table:
-            linked_table = self.input_frame.nametowidget(
-                'linked_table').get_selected_text()
+        if self.Database_Obj.add_new_interface(interface_name, table_name, self.record_name_formula, all_fields, is_required, self.parent_interface) == 'Error':
+            messagebox.showerror('Error', 'Error adding interface')
+            self.Database_Obj.delete_table(table_name)
+            return
+
+        for one_multi_value in self.multi_value_frames:
+            one_multi_value.set_parent_interface(interface_name, is_required)
+            one_multi_value.Add_Interface()
+            
+        self.multi_value_frames=[]
+        self.FieldList.clear_list_boxes()
+
+
+
+    def Validate_Field(self,field_name, field_type, field_label, linked_table):
+
+        if field_name.strip()=='':
+            messagebox.showerror('error', 'Need a name for the field')
+            return 'Error'
+
+        if field_name.strip() in field_names_not_allowed:
+            messagebox.showerror('error', 'Cannot use that field name')
+            return 'Error'
+
+        if field_label.strip() == '':
+            messagebox.showerror('error', 'Need a label for the field')
+            return 'Error'
 
         if field_type=='linked_table' and linked_table =='':
             messagebox.showerror('error', 'Need to select a table to link to')
-            return 'Fail'     
+            return 'Error'
 
         if self.FieldList.value_in_list('field_name', field_name):
             messagebox.showerror('error', 'That field name already used')
-            return 'Fail'
+            return 'Error'
 
-        field_label = self.input_frame.nametowidget('field_label').get()
+        
         if self.FieldList.value_in_list('field_label', field_label):
             messagebox.showerror('error', 'That field label already used')
-            return 'Fail'
+            return 'Error'
 
+        if field_type=='multi_list_box':
+
+            interface_list = self.Database_Obj.get_interface_names()
+            if interface_list == 'Error':
+                messagebox.showerror(
+                    'Error', 'Not able to list of current interface')
+                return 'Error'
+
+            if field_label in interface_list:
+                messagebox.showerror('error', 'That interface name already used.  You cannot use it for a field name with multi link')
+                return 'Error'
+
+    def Add_Field_Button_Clicked(self, event=None):
+        field_name = self.input_frame.nametowidget('field_name').get()
+        field_type = self.input_frame.nametowidget(
+            'field_type').get_selected_text()
+        field_label = self.input_frame.nametowidget('field_label').get()
+        linked_table = ''
+        if field_type == 'linked_table':
+            linked_table = self.input_frame.nametowidget(
+                'linked_table').get_selected_text()
+
+        if self.Validate_Field(field_name, field_type, field_label, linked_table)=='Error':
+            return
+
+        self.Add_Field()
+
+        if field_type == 'multi_linked_table':
+            new_frame = New_Interface_DLG_Class_For_Multi_Value(self.Database_Obj,
+                                                                self.winfo_toplevel(), title_text='Create Linked Interface', name=field_name)
+            new_frame.grid(row=1, column=1, sticky='news')
+            new_frame.set_from(self._name)
+            new_frame.set_interface_name(self.input_frame.nametowidget(
+                'field_label').get())
+            self.multi_value_frames.append(new_frame)
+            new_frame.tkraise()
+        
+        self.reset_all_fields()
+        # else:
+        #     self.Add_Field()
+    #def Add_Field(self, event=None):
+
+    def Add_Field(self):
+
+        field_name = self.input_frame.nametowidget('field_name').get()
+        field_type = self.input_frame.nametowidget(
+            'field_type').get_selected_text()
+        field_label = self.input_frame.nametowidget('field_label').get()
+        linked_table = ''
+        if field_type == 'linked_table':
+            linked_table = self.input_frame.nametowidget(
+                'linked_table').get_selected_text()
 
         this_field={}
         this_field['field_name'] = field_name
         this_field['field_type'] = field_type
         this_field['field_label'] = field_label
         this_field['linked_table'] = linked_table
-        #this_field['immutable'] = immutable
 
-
+        if 'order' in self.field_to_update:
+            this_field['order']=self.field_to_update['order']
 
         self.FieldList.add_one_record(this_field)
-        self.input_frame.nametowidget('field_type').focus_set()
-        self.reset_all_fields()
 
+        self.field_to_update = None
+        self.input_frame.nametowidget('field_label').focus_set()
+        
 
     def reset_all_fields(self):
 
@@ -459,6 +617,10 @@ class New_Interface_DLG_Class(MyFrame):
         self.winfo_toplevel().unbind("<Alt-a>")
         self.clear_widgets()
         self.winfo_toplevel().nametowidget('interface_admin').populate_interface_box()
+
+        for one_multi_value in self.multi_value_frames:
+            one_multi_value.destroy()
+            
         super().Cancel()
 
     def clear_widgets(self):
@@ -478,20 +640,66 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
     def __init__(self, Database_Obj, *args, **kwargs):
 
         self.current_interface_info = []
-        self.current_interface_name = ''
-        self.current_table_name = ''
+
         self.current_name_formula = ''
         ####################
         #always have super()     at the top
         super().__init__(Database_Obj, *args, **kwargs)
         ####################
 
+    def Done(self, event=None):
+
+        is_required = (self.Required_checkbox_var.get() == 1)
+        table_name = self.input_frame.nametowidget('table_name').get()
+        interface_name = self.input_frame.nametowidget(
+            'interface_name').get().strip()
+        if self.Validate(table_name, interface_name, is_required) == 'Error':
+            return
+
+        if self.Update_Interface()=='Error':
+            return
+
+        self.reset_frame()
+
+    def set_current_interface_info(self, interface_records, interface_info):
+
+        self.current_name_formula = interface_info['record_name_formula']
+        self.record_name_formula = interface_info['record_name_formula']
+        self.current_interface_name = interface_info['interface_name']
+        self.current_table_name = interface_info['interface_table']
+        self.input_frame.nametowidget(
+            'linked_table').remove_item(self.current_interface_name)
+
+        self.current_interface_info = []
+
+        self.input_frame.nametowidget('record_name_formula')[
+            'text'] = self.current_name_formula
+        self.input_frame.nametowidget('table_name').delete(0, tk.END)
+        self.input_frame.nametowidget('table_name').insert(
+            0, self.current_table_name)
+
+        self.input_frame.nametowidget('interface_name').delete(0, tk.END)
+        self.input_frame.nametowidget('interface_name').insert(
+            0, self.current_interface_name)
+
+        for one_item in interface_records:
+            if not one_item['field_name'] == 'parent_id':
+                del one_item['Record_ID']
+                del one_item['interface_name']
+                self.FieldList.add_one_record(one_item)
+                self.current_interface_info.append(one_item)
+
+                if one_item['field_type'] == 'multi_linked_table':
+                    self.set_this_MV_frame(
+                        one_item['field_label'], one_item['field_name'])
 
     def tkraise(self):
 
-        temp_button = self.button_frame.nametowidget('add_interface_button')
-        temp_button.config(text='Update Interface')
-        temp_button.config(command=self.update_interface)
+        self.button_frame.nametowidget(
+            'add_interface_button').config(text='Update Interface')
+
+        # self.button_frame.nametowidget(
+        #     'add_interface_button').config(command=self.update_interface)
 
         super().tkraise()
         self.enable_linked_table()
@@ -499,7 +707,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
             self.current_interface_name)
         self.disable_linked_table()
 
-    def update_interface(self):
+    def Update_Interface(self):
 
         record_ID = {'column_name': 'interface_name', 'value':self.current_interface_name, 'type':'string'}
         columns_to_update = []
@@ -509,7 +717,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
         if not interface_name == self.current_interface_name:
             if interface_name in self.Database_Obj.get_interface_names():
                 messagebox.ERROR('Error', 'Interface name already being used')
-                return
+                return 'Error'
 
 
             one_column_to_update = {}
@@ -539,7 +747,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
             if self.Database_Obj.change_table_name(
                 self.current_table_name, table_name) == 'Error':
                 messagebox.showerror('Error', 'Problem changing table name')
-                return
+                return 'Error'
             self.current_table_name = table_name
             
 
@@ -566,7 +774,7 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
         for one_field in fields_needed_for_name_formula:
             if next((x for x in fields_from_multibox if x['field_name'] == one_field), None) == None:        
                 messagebox.showerror('Error', 'Missing fields that are in the name formula')
-                return               
+                return 'Error'            
 
         if update_interface_info:
             self.Database_Obj.update_one_record(
@@ -583,20 +791,22 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
                 fields_to_remove = fields_to_remove + \
                     [x for x in self.current_interface_info if x['field_name']
                         == one_field['field_name']]
-                new_fields.append(one_field)
-                self.current_interface_info.append(one_field)
+                if not one_field['field_name'] == 'parent_id':
+                    new_fields.append(one_field)
+                    self.current_interface_info.append(one_field)
 
         #check if fields were removed.
         
         for one_field in self.current_interface_info:
             if next((x for x in fields_from_multibox if x['field_name'] == one_field['field_name']), None) == None:
+                #if not one_field['field_type']=='multi_linked_table':
                 fields_to_remove.append(one_field)
 
         if not fields_to_remove == []:
             if self.Database_Obj.remove_fields_interface(self.current_interface_name,
-                                                         self.current_table_name, [x['field_name'] for x in fields_to_remove]) == 'Error':
+                                                         self.current_table_name, fields_to_remove) == 'Error':
                 messagebox.showerror('Error', 'Error removing fields')
-                return
+                return 'Error'
             else:
                 self.current_interface_info.remove(one_field)
 
@@ -605,47 +815,47 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
                                                           self.current_table_name, new_fields) == 'Error':
                 messagebox.showerror(
                     'Error', 'Error adding one of the new fields')
-                return
+                return 'Error'
 
-        #if we wanted to allow fields to be changed we would do it here
+        for one_multi_value in self.multi_value_frames:
+            one_multi_value.set_parent_interface(interface_name, False)
+            if type(one_multi_value).__name__== 'New_Interface_DLG_Class_For_Multi_Value':
+                one_multi_value.Add_Interface()
+            else:
+                one_multi_value.Update_Interface()
+            
+        self.multi_value_frames=[]
+        self.FieldList.clear_list_boxes()
+        self.lower()
 
     def Cancel(self):
         #in case there are things to do when leaving the frame
         temp_button = self.button_frame.nametowidget('add_interface_button')
         temp_button.config(text='Add Table')
-        temp_button.config(command=self.Add_Interface)
+        temp_button.config(command=self.Done)
+
+        for one_multi_value in self.multi_value_frames:
+            one_multi_value.destroy()
 
         super().Cancel()
     
-    def set_current_interface_info(self, interface_records, interface_info):
-        
-        self.current_name_formula= interface_info['record_name_formula']
-        self.record_name_formula = interface_info['record_name_formula']
-        self.current_interface_name = interface_info['interface_name']
-        self.current_table_name = interface_info['interface_table']
-        self.input_frame.nametowidget(
-            'linked_table').remove_item(self.current_interface_name)
+    def set_this_MV_frame(self, this_interface, field_name):
+        interface_fields = self.Database_Obj.get_interface_records(
+            this_interface)
+        if interface_fields == 'Error':
+            messagebox.showerror('error', 'Error loading interface')
+            return 'Error'
 
-        self.current_interface_info = []
+        interface_info = self.Database_Obj.get_interface_info(this_interface)
 
-        self.input_frame.nametowidget('record_name_formula')[
-            'text'] = self.current_name_formula
-        self.input_frame.nametowidget('table_name').delete(0, tk.END)
-        self.input_frame.nametowidget('table_name').insert(
-            0, self.current_table_name)
-
-        self.input_frame.nametowidget('interface_name').delete(0, tk.END)
-        self.input_frame.nametowidget('interface_name').insert(
-            0, self.current_interface_name)
-
-        for one_item in interface_records:
-
-            del one_item['Record_ID']
-            del one_item['interface_name']
-            self.FieldList.add_one_record(one_item)
-            self.current_interface_info.append(one_item)
-
-
+        new_frame = Alter_Interface_DLG_Class_For_Multi_Value(self.Database_Obj,
+                                                            self.winfo_toplevel(), title_text='Alter Multi Value', name=field_name)
+        new_frame.grid(row=1, column=1, sticky='news')
+        new_frame.set_from(self._name)
+        new_frame.set_interface_name(self.input_frame.nametowidget(
+            'field_label').get())
+        new_frame.set_current_interface_info(interface_fields,interface_info)
+        self.multi_value_frames.append(new_frame)
 
 class BuildName_DLG_Class(tk.Toplevel):
     def __init__(self, *args, **kwargs):
@@ -676,7 +886,20 @@ class BuildName_DLG_Class(tk.Toplevel):
         MyButton(font_size,self,text='Cancel',command=self.destroy).grid(row=4, column=2)
 
     def done(self):
-        self.update_record_name(self.nametowidget('edit_box').get())
+
+        this_name = self.nametowidget('edit_box').get()
+
+        fields_needed = get_fields_for_record_name_formula(this_name)
+
+        fields_available = self.nametowidget('field_list_box').get_all_elements()
+
+        if [x for x in fields_needed if x in fields_available]==[]:
+            messagebox.showerror('Error', 'Need to choose at least one field from this interface')
+            return
+
+        self.update_record_name(this_name)
+
+
         # interface_name = self.nametowidget('edit_box').get()
         # self.interface_name_widget['text'] = 'Name Formula: ' + interface_name
         # record_name = interface_name
@@ -694,3 +917,131 @@ class BuildName_DLG_Class(tk.Toplevel):
         self.nametowidget('edit_box').delete(0, tk.END)
         self.nametowidget('edit_box').insert(0, current_text)
 
+
+class Alter_Interface_DLG_Class_For_Multi_Value(Alter_Interface_DLG_Class):
+    def __init__(self, Database_Obj, *args, **kwargs):
+        super().__init__(Database_Obj, *args, **kwargs)
+
+        self.button_frame.nametowidget(
+            'add_interface_button').config(text="Done")
+        self.button_frame.nametowidget('add_interface_button').config(
+            command=self.Done)
+        self.button_frame.nametowidget('cancel').config(
+            command=self.lower())
+        self.title_frame.nametowidget('title').config(
+            text='New Multi Value Table')
+
+        self.input_frame.nametowidget(
+            'required_interface').set_state('disabled')
+
+        self.is_required = False
+
+    def Done(self, event=None):
+
+        is_required = (self.Required_checkbox_var.get() == 1)
+        table_name = self.input_frame.nametowidget('table_name').get()
+        interface_name = self.input_frame.nametowidget(
+            'interface_name').get().strip()
+        if self.Validate(table_name, interface_name, is_required) == 'Error':
+            return
+        else:
+            #self.winfo_toplevel().nametowidget(self.from_frame).Add_Field()
+            pass
+
+            self.current_interface_name = interface_name
+            self.current_table_name = table_name
+            self.winfo_toplevel().nametowidget(self.from_frame).do_binding()
+            self.lower()
+
+    def tkraise(self):
+
+        super().tkraise()
+
+        self.button_frame.nametowidget(
+            'add_interface_button').config(text='Done')
+
+        self.button_frame.nametowidget(
+            'add_interface_button').config(command=self.Done)
+
+    def set_interface_name(self, interface_name):
+        self.input_frame.nametowidget(
+            'interface_name').delete(0, tk.END)
+
+        self.input_frame.nametowidget(
+            'interface_name').insert(0, interface_name)
+
+        self.title_frame.nametowidget('title')['text'] = 'Update ' + interface_name
+
+    def set_from(self, from_frame):
+        self.from_frame = from_frame
+
+    def set_parent_interface(self, interface_name, is_required):
+        self.is_required = is_required
+
+        this_field = {}
+        this_field['field_name'] = 'parent_id'
+        this_field['field_type'] = 'linked_table'
+        this_field['field_label'] = ''
+        this_field['linked_table'] = interface_name
+        self.parent_interface = interface_name
+        self.FieldList.add_one_record(this_field)
+
+class New_Interface_DLG_Class_For_Multi_Value(New_Interface_DLG_Class):
+    def __init__(self, Database_Obj, *args, **kwargs):
+        super().__init__(Database_Obj, *args, **kwargs)
+
+        self.button_frame.nametowidget(
+            'add_interface_button').config(text="Done")
+        self.button_frame.nametowidget('add_interface_button').config(
+            command=self.Done)
+        self.button_frame.nametowidget('cancel').config(
+            command=self.lower())
+        self.title_frame.nametowidget('title').config(text='New Multi Value Table')
+
+        self.input_frame.nametowidget(
+            'required_interface').set_state('disabled')
+
+        self.input_frame.nametowidget('table_name').focus_set()
+        self.is_required=False
+
+    def Done(self, event=None):
+
+        is_required = (self.Required_checkbox_var.get() == 1)
+        table_name = self.input_frame.nametowidget('table_name').get()
+        interface_name = self.input_frame.nametowidget(
+            'interface_name').get().strip()
+        if self.Validate(table_name, interface_name, is_required) == 'Error':
+            return
+        else:
+            #self.winfo_toplevel().nametowidget(self.from_frame).Add_Field()
+            pass
+
+            self.current_interface_name = interface_name
+            self.current_table_name = table_name
+            self.winfo_toplevel().nametowidget(self.from_frame).do_binding()
+            self.lower()
+
+    def set_interface_name(self, interface_name):
+        self.input_frame.nametowidget('interface_name').insert(0, interface_name)
+
+    def set_from(self, from_frame):
+        self.from_frame=from_frame
+    
+    def set_parent_interface(self, interface_name, is_required):
+        self.is_required = is_required
+
+        this_field = {}
+        this_field['field_name'] = 'parent_id'
+        this_field['field_type'] = 'linked_table'
+        this_field['field_label'] = ''
+        this_field['linked_table'] = interface_name
+        self.parent_interface = interface_name
+        self.FieldList.add_one_record(this_field)
+
+    def Add_Interface(self):
+        
+        table_name = self.input_frame.nametowidget('table_name').get()
+        interface_name = self.input_frame.nametowidget(
+            'interface_name').get().strip()
+
+        super().Add_Interface(table_name, interface_name, self.is_required)

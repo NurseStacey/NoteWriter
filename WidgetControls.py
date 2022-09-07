@@ -340,6 +340,10 @@ class MyMultiListBox(tk.Frame):
     def get_current_selection_first(self, which):
         return self.listboxframe.nametowidget(which).get(self.listboxframe.nametowidget(which).curselection()[0])
 
+    def current_selection_position(self):
+
+        return(self.list_boxes[0].curselction()[0])
+
     def get_current_selection(self):
         return_value = {}
         field_names = []
@@ -347,6 +351,8 @@ class MyMultiListBox(tk.Frame):
         for one_box in self.list_boxes:
             return_value[one_box._name] = one_box.get(
                 one_box.curselection()[0])
+
+        return_value['order'] = self.list_boxes[0].curselection()[0]
             # return_value.append(one_box.get(one_box.curselection()[0]))
             # field_names.append(one_box._name)
 
@@ -465,6 +471,10 @@ class MyMultiListBox(tk.Frame):
 
     def add_one_record(self, record):
 
+        position=tk.END
+        if 'order' in record:
+            position=record['order']
+
         for one_box in self.list_boxes:
             field_name = one_box._name
 
@@ -472,14 +482,14 @@ class MyMultiListBox(tk.Frame):
                 value = record[field_name]
                 if isinstance(value, datetime.date):
                     text = value.strftime('%m/%d/%Y')
-                    one_box.insert(tk.END, text)
+                    one_box.insert(position, text)
                 elif isinstance(value, bool):
                     if value:
-                        one_box.insert(tk.END, 'Yes')
+                        one_box.insert(position, 'Yes')
                     else:
-                        one_box.insert(tk.END, 'No')
+                        one_box.insert(position, 'No')
                 else:
-                    one_box.insert(tk.END, value)
+                    one_box.insert(position, value)
 
     def change_position(self, which, whereto):
         swap = ""
@@ -664,23 +674,17 @@ class MyEntry(tk.Frame):
                 self.Entry_Box.delete(0, tk.END)
                 text= '0' + text + '\\'
                 self.Entry_Box.insert(0,text)
-                # self.Entry_Box.after_idle(
-                #     lambda: self.Entry_Box.configure(validate='all'))
                 
             elif len(text)==2:
                 if text[0]=='0' and not text[1]=='0':
                     self.Entry_Box.delete(0, tk.END)
                     text=text + '\\'
                     self.Entry_Box.insert(0, text)
-                    # self.Entry_Box.after_idle(
-                    #     lambda: self.Entry_Box.configure(validate='all'))
                   
                 elif text[0]=='1' and text[1] in ['0','1','2']:
                     self.Entry_Box.delete(0, tk.END)
                     text = text + '\\'
                     self.Entry_Box.insert(0, text)
-                    # self.Entry_Box.after_idle(
-                    #     lambda: self.Entry_Box.configure(validate='all'))
                     
                 else:
                     text=text[0:len(text)-1]
@@ -950,6 +954,8 @@ class MyCheckBox(tk.Checkbutton):
 
         super().__init__(*args, **kwargs)
 
+    def set_state(self, this_state):
+        self.config(state=this_state)
 
 class FunctionOnSelect():
     def __init__(self, values, function_call):
@@ -983,6 +989,9 @@ class ListScrollComboTwo(tk.Frame):
         self.listbox.selection_set(0)
         self.function_on_select = []
 
+    def get_all_elements(self):
+        return self.listbox.get(0, tk.END)
+        
     def set_function_on_select(self, values, function):
         self.function_on_select.append(FunctionOnSelect(values, function))
 
@@ -1078,7 +1087,10 @@ class ListScrollComboTwo(tk.Frame):
         if self.listbox.get(0, tk.END)==():
             return
 
-        ID = self.listbox.get(0, tk.END).index(text)
+        try:
+            ID = self.listbox.get(0, tk.END).index(text)
+        except ValueError:
+            return
 
         if ID<0:
             return
@@ -1142,7 +1154,7 @@ class ScrollingFrame(ttk.Frame):
 
         self.scrollbar = ttk.Scrollbar(self, orient="vertical",
                                        command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
+        self.scrollable_frame = ttk.Frame(self.canvas, name='base_frame')
 
         self.canvas.bind(
             "<Configure>",
@@ -1152,13 +1164,16 @@ class ScrollingFrame(ttk.Frame):
         )
 
         self.canvas.create_window(
-            (0, 0), window=self.scrollable_frame, anchor="nw")
+            (0, 0), width=1500, window=self.scrollable_frame, anchor="nw")
 
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set, height=600, width=500)
 
-        self.canvas.grid(row=0, column=0, sticky='news')
+        self.canvas.grid(row=0, column=0)
         self.scrollbar.grid(row=0, column=1, sticky='ns')
 
+        # for index in range(50):
+        #     tk.Label(self.scrollable_frame, text='I want to be able to display a very very long line here. I want to be able to display a very very long line here. I want to be able to display a very very long line here').grid(
+        #         row=index, column=1)            
         # this_file = open('fruit.txt', 'r')
         # the_fruit = []
 

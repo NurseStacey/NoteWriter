@@ -69,6 +69,7 @@ class MyDatabaseClass():
             one_interface['interface_name'] = interface_data[0]
             one_interface['record_name_formula'] =interface_data[1]
             one_interface['table_name'] =interface_data[2]
+            one_interface['from_interface'] = interface_data[3]
             self.needed_interfaces.append(one_interface)
 
         this_file.close()
@@ -81,7 +82,7 @@ class MyDatabaseClass():
             if not one_interface['interface_name'] in interface_names:
                 the_fields = self.get_required_interface_fields(
                     one_interface['interface_name'])
-                if self.add_new_interface(one_interface['interface_name'], one_interface['table_name'], one_interface['record_name_formula'], the_fields, True) == 'Error':
+                if self.add_new_interface(one_interface['interface_name'], one_interface['table_name'], one_interface['record_name_formula'], the_fields, True, one_interface['from_interface'] ) == 'Error':
                     messagebox.showerror(
                         'Error', 'Error Creating Needed Interfaces')
                     return('Error')
@@ -130,6 +131,20 @@ class MyDatabaseClass():
     def get_table_names(self):
 
         _SQL = "SELECT table_name FROM information_schema.tables"
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+        results = mycursor.fetchall()
+        return [item[0] for item in results]
+
+    def get_child_interface_names(self, parent_interface):
+        _SQL = "SELECT interface_name FROM interfaces WHERE parent_interface=" + \
+            chr(34) + parent_interface + chr(34)
+
         try:
             mycursor = self.get_cursor()
             mycursor.execute(_SQL)
@@ -246,7 +261,10 @@ class MyDatabaseClass():
         field_type = []
 
         for one_field in all_data:
-            _SQL += one_field['column']
+            if 'column' in one_field:
+                _SQL += one_field['column']
+            elif 'field_name' in one_field:
+                _SQL += one_field['field_name']
             _SQL += ", "
 
             field_data.append(one_field['value'])
@@ -275,13 +293,12 @@ class MyDatabaseClass():
             mycursor = self.get_cursor()
             mycursor.execute(_SQL)
             self.the_db.commit()
+            return(mycursor.lastrowid)
         except mysql.connector.Error as err:
             print("Something went wrong: {}".format(err))
             return 'Error'
-        
-        return 'No_Error'
 
-    def add_new_interface(self, interface_name, table_name, record_name_formula, all_fields, required_table):
+    def add_new_interface(self, interface_name, table_name, record_name_formula, all_fields, required_table, parent_interface):
         this_file=None
         if required_table:
             file_name=interface_name + '.txt'
@@ -324,7 +341,7 @@ class MyDatabaseClass():
             print("Something went wrong: {}".format(err))
             return 'Error'
         
-        _SQL = "INSERT INTO interfaces (interface_name, record_name_formula, Interface_Table) VALUES ("
+        _SQL = "INSERT INTO interfaces (interface_name, record_name_formula, interface_table, parent_interface) VALUES ("
         #%s, %s, %s)"
         _SQL += chr(34)
         _SQL += interface_name
@@ -337,6 +354,11 @@ class MyDatabaseClass():
         _SQL += chr(34)
         _SQL += table_name
         _SQL += chr(34)
+        _SQL += ", "
+        _SQL += chr(34)
+        _SQL += parent_interface
+        _SQL += chr(34)
+
         _SQL += ")"
 
         try:
@@ -397,7 +419,8 @@ class MyDatabaseClass():
             if one_field['field_type']=='linked_table':
                 linked_fields.append(one_field)            
             
-            _SQL += self.one_new_field_query_string(one_field)
+            if not one_field['field_type']=='multi_linked_table':
+                _SQL += self.one_new_field_query_string(one_field)
 
 
         _SQL += 'PRIMARY KEY (Record_ID)'
@@ -567,7 +590,9 @@ class MyDatabaseClass():
     def update_interface(self, old_interface_name, interface_name, table_name, record_name_formula):
 
         _SQL = 'DELETE FROM interfaces WHERE interface_name= '
-
+        _SQL += chr(34)
+        _SQL += old_interface_name
+        _SQL += chr(34)
 
 
         try:
@@ -633,12 +658,20 @@ class MyDatabaseClass():
         return 'No_Error'
 
     def remove_fields(self, table_name, fields_to_remove):
+
+        these_fields = [
+            x for x in fields_to_remove if not x['field_type'] == 'multi_linked_table']
+
+        if these_fields==[]:
+            return
+
         _SQL = 'ALTER TABLE ' + table_name + ' '
 
-        for one_field in fields_to_remove:
-            _SQL += "DROP COLUMN "
-            _SQL += one_field
-            _SQL += ", "
+        for one_field in these_fields:
+            if not one_field['field_type']=='multi_linked_table':
+                _SQL += "DROP COLUMN "
+                _SQL += one_field['field_name']
+                _SQL += ", "
 
         _SQL = _SQL[0:len(_SQL)-2]
         _SQL += ';'
@@ -659,7 +692,7 @@ class MyDatabaseClass():
         for one_field in fields_to_remove:
             _SQL = 'DELETE FROM interface_fields WHERE field_name= '
             _SQL += chr(34)
-            _SQL += one_field
+            _SQL += one_field['field_name']
             _SQL += chr(34)
             try:
                 mycursor = self.get_cursor()

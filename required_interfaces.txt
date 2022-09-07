@@ -1,4 +1,1 @@
-This Interface,<!-field_one-!>,this_table
 
-Patient Interface,<!-last_name-!>, <!-first_name-!>-<!-dob-!>,patient_table
-Patient Phone Numbers,<!-ph_type-!> - <!-ph_number-!>,pt_phone

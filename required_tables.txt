@@ -1,2 +1,2 @@
 interface_fields-CREATE TABLE interface_fields (Record_ID int NOT NULL AUTO_INCREMENT, field_order SMALLINT, field_name VARCHAR(255), interface_name VARCHAR(255), field_type VARCHAR(255), linked_table VARCHAR(255), field_label VARCHAR(255), PRIMARY KEY (Record_ID))
-interfaces-CREATE TABLE interfaces (Record_ID int NOT NULL AUTO_INCREMENT, interface_name VARCHAR(255), interface_table VARCHAR(255), record_name_formula VARCHAR(255), description VARCHAR(255), PRIMARY KEY (Record_ID))
+interfaces-CREATE TABLE interfaces (Record_ID int NOT NULL AUTO_INCREMENT, interface_name VARCHAR(255), interface_table VARCHAR(255), record_name_formula VARCHAR(255), description VARCHAR(255), parent_interface VARCHAR(255), PRIMARY KEY (Record_ID))
