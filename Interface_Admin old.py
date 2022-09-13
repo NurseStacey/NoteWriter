@@ -117,7 +117,7 @@ class New_Interface_DLG_Class(MyFrame):
         ####################
 
         self.record_name_formula = ''
-        #self.field_to_update = ''
+        self.field_to_update = ''
         font_size = 18
         self.FieldList = None
         self.Required_checkbox_var = None
@@ -147,8 +147,7 @@ class New_Interface_DLG_Class(MyFrame):
         self.reset_all_fields()
 
         self.button_frame.nametowidget('edit_field').config(text='Update Field')
-        self.button_frame.nametowidget('edit_field').config(
-            command=self.Update_Field_Clicked)
+        self.button_frame.nametowidget('edit_field').config(command=self.Update_Field)
         self.button_frame.nametowidget('add_interface_button').config(state='disabled')
         self.button_frame.nametowidget('cancel').config(command=self.Cancel_Field_Update)
         self.button_frame.nametowidget('add_field').config(
@@ -156,7 +155,7 @@ class New_Interface_DLG_Class(MyFrame):
 
         self.input_frame.nametowidget('field_type').set_selection(this_field['field_type'])
 
-        #self.field_to_update = this_field
+        self.field_to_update = this_field
         self.input_frame.nametowidget('field_name').insert(
             0, this_field['field_name'])
         self.input_frame.nametowidget(
@@ -285,21 +284,15 @@ class New_Interface_DLG_Class(MyFrame):
 
         headers = ['field_name', 'field_type',
                    'field_label', 'linked_table']
-        # all_variables = headers + ['order']
-        # all_variables = headers + [x+'-original' for x in all_variables]
 
         self.FieldList = MyMultiListBox(
-            headers, self.input_frame)
+            headers, self.input_frame)              
 
         self.FieldList.change_lable_text('field_name', 'Field Name')
         self.FieldList.change_lable_text('field_type', 'Field Type')
         self.FieldList.change_lable_text('field_label', 'Field Label')
         self.FieldList.change_lable_text('linked_table', 'Linked Table')
-
-        # fields_to_hide = [x for x in all_variables if x not in headers]
-
-        # for one_field in fields_to_hide:
-        #     self.FieldList.hide_column(one_field)
+        #self.FieldList.change_lable_text('immutable', 'Immutable Name')
 
         self.FieldList.set_font_size(16)
         self.FieldList.grid(row=this_row, column=2, columnspan=6,
@@ -358,7 +351,7 @@ class New_Interface_DLG_Class(MyFrame):
         self.FieldList.delete_one_record('field_name', self.field_to_update['field_name'])
         
 
-    def Update_Field_Clicked(self):
+    def Update_Field(self):
 
         self.winfo_toplevel().bind("<Alt-e>", self.Edit_Field)
         self.winfo_toplevel().unbind("<Alt-u>")
@@ -367,18 +360,15 @@ class New_Interface_DLG_Class(MyFrame):
         self.button_frame.nametowidget('add_field').config(
             state='normal')
 
-
-        #self.delete_record_to_update()
+        self.delete_record_to_update()
 
         for one_MV_interface in self.multi_value_frames:
-            if one_MV_interface._name == self.FieldList.get_current_selection_this_column('field_name'):
+            if one_MV_interface._name == self.field_to_update['field_name']:
                 one_MV_interface.set_interface_name(self.input_frame.nametowidget(
                     'field_label').get())
                 one_MV_interface.tkraise()
             
-        self.Update_Field()
-
-        #self.Add_Field()
+        self.Add_Field()
 
         self.reset_edit_field_button()
         self.reset_all_fields()
@@ -389,8 +379,6 @@ class New_Interface_DLG_Class(MyFrame):
         #which = event.widget.curselection()[0]
 
         self.FieldList.delete_one_item(which)
-
-        pass
 
     def create_name(self, event=None):
         
@@ -443,7 +431,7 @@ class New_Interface_DLG_Class(MyFrame):
                 'Error', 'Must use at least one field in record name')
             return 'Error'
 
-        if not table_name==self.current_table_name or self.current_table_name=='':
+        if not table_name==self.current_table_name:
             if table_name.strip() == '':
                 messagebox.showerror('Error', 'Need a table name entered')
                 return 'Error'
@@ -534,7 +522,14 @@ class New_Interface_DLG_Class(MyFrame):
             messagebox.showerror('error', 'Need to select a table to link to')
             return 'Error'
 
+        if self.FieldList.value_in_list('field_name', field_name):
+            messagebox.showerror('error', 'That field name already used')
+            return 'Error'
 
+        
+        if self.FieldList.value_in_list('field_label', field_label):
+            messagebox.showerror('error', 'That field label already used')
+            return 'Error'
 
         if field_type=='multi_list_box':
 
@@ -548,65 +543,6 @@ class New_Interface_DLG_Class(MyFrame):
                 messagebox.showerror('error', 'That interface name already used.  You cannot use it for a field name with multi link')
                 return 'Error'
 
-    def Update_Field(self):
-        field_name = self.input_frame.nametowidget('field_name').get()
-        field_type = self.input_frame.nametowidget(
-            'field_type').get_selected_text()
-        field_label = self.input_frame.nametowidget('field_label').get()
-        linked_table = ''
-        if field_type == 'linked_table':
-            linked_table = self.input_frame.nametowidget(
-                'linked_table').get_selected_text()
-
-        if self.Validate_Field(field_name, field_type, field_label, linked_table) == 'Error':
-            return
-
-
-        #this validation needs to be done here - different than when you update a field
-        if not field_name == self.FieldList.get_current_selection_this_column('field_name') and self.FieldList.value_in_list('field_name', field_name):
-            messagebox.showerror('error', 'That field name already used')
-            return 'Error'
-
-        if not field_label == self.FieldList.get_current_selection_this_column('field_label') and self.FieldList.value_in_list('field_label', field_label):
-            messagebox.showerror('error', 'That field label already used')
-            return 'Error'
-
-        updated_field = {}
-        updated_field['field_name']=field_name
-        updated_field['field_type']=field_type
-        updated_field['field_label'] = field_label
-        updated_field['linked_table'] = linked_table
-
-        original_field_name = self.FieldList.get_current_selection_value(
-                'field_name-original')
-
-        self.FieldList.update_selected_record(updated_field)
-
-
-
-        self.reset_edit_field_button()
-        self.reset_all_fields()
-
-
-
-        if field_type == 'multi_linked_table':
-
-
-
-            if original_field_name == '':
-                new_frame = New_Interface_DLG_Class_For_Multi_Value(self.Database_Obj,
-                                                                    self.winfo_toplevel(), title_text='Create Linked Interface', name=field_name)
-                new_frame.grid(row=1, column=1, sticky='news')
-                new_frame.set_from(self._name)
-                new_frame.set_interface_name(field_label)
-                self.multi_value_frames.append(new_frame)
-                new_frame.tkraise()
-            else:
-                this_frame = next(x for x in self.multi_value_frames if x._name==original_field_name)
-                this_frame.set_from(self._name)
-                this_frame.set_interface_name(field_label)
-                this_frame.tkraise()
-
     def Add_Field_Button_Clicked(self, event=None):
         field_name = self.input_frame.nametowidget('field_name').get()
         field_type = self.input_frame.nametowidget(
@@ -619,16 +555,6 @@ class New_Interface_DLG_Class(MyFrame):
 
         if self.Validate_Field(field_name, field_type, field_label, linked_table)=='Error':
             return
-
-        #this validation needs to be done here - different than when you update a field
-
-        if self.FieldList.value_in_list('field_label', field_label):
-            messagebox.showerror('error', 'That field label already used')
-            return 'Error'
-
-        if self.FieldList.value_in_list('field_name', field_name):
-            messagebox.showerror('error', 'That field name already used')
-            return 'Error'
 
         self.Add_Field()
 
@@ -663,13 +589,13 @@ class New_Interface_DLG_Class(MyFrame):
         this_field['field_type'] = field_type
         this_field['field_label'] = field_label
         this_field['linked_table'] = linked_table
-#toad
-        # if 'order' in self.field_to_update:
-        #     this_field['order']=self.field_to_update['order']
+
+        if 'order' in self.field_to_update:
+            this_field['order']=self.field_to_update['order']
 
         self.FieldList.add_one_record(this_field)
-#toad
-        # self.field_to_update = None
+
+        self.field_to_update = None
         self.input_frame.nametowidget('field_label').focus_set()
         
 
@@ -681,7 +607,7 @@ class New_Interface_DLG_Class(MyFrame):
         self.input_frame.nametowidget('field_type').reset()
         self.input_frame.nametowidget('linked_table').reset()
         #self.Required_checkbox_var.set(0)
-        #self.FieldList.clear_all_selections()
+        self.FieldList.clear_all_selections()
 
     def Cancel(self, event=None):
         self.winfo_toplevel().unbind("<Alt-f>")
@@ -713,7 +639,7 @@ class New_Interface_DLG_Class(MyFrame):
 class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
     def __init__(self, Database_Obj, *args, **kwargs):
 
-        #self.current_interface_info = []
+        self.current_interface_info = []
 
         self.current_name_formula = ''
         ####################
@@ -758,18 +684,10 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
         for one_item in interface_records:
             if not one_item['field_name'] == 'parent_id':
-
-                one_item_for_fieldlist = {}
                 del one_item['Record_ID']
                 del one_item['interface_name']
-                
-                for key in one_item:
-                    one_item_for_fieldlist[key]=one_item[key]
-                    one_item_for_fieldlist[key+'-original']=one_item[key]
-
-
-                self.FieldList.add_one_record(one_item_for_fieldlist)
-                #self.current_interface_info.append(one_item)
+                self.FieldList.add_one_record(one_item)
+                self.current_interface_info.append(one_item)
 
                 if one_item['field_type'] == 'multi_linked_table':
                     self.set_this_MV_frame(
@@ -845,40 +763,53 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
 
             self.current_name_formula = record_name_formula
             update_interface_info = True
+            # if self.Database_Obj.change_name_formula(
+            #         self.current_interface_name, record_name_formula) == 'Error':
+            #     messagebox.ERROR('Error', 'Problem making the table')
+            #     return
         
         fields_from_multibox = self.FieldList.get_all_records()
         fields_needed_for_name_formula = get_fields_for_record_name_formula(self.current_name_formula)
 
-        fields_to_remove = [x for x in fields_from_multibox if x['field_order']==-1]
-        fields_from_multibox = [x for x in fields_from_multibox if x not in fields_to_remove]
-
-        #if field_name-original not in the dictionar it must not be in the table so doesn't need to really be removed.
-        fields_to_remove = [
-            x for x in fields_to_remove if 'field_name-original' in x]
-
-        new_fields = [x for x in fields_from_multibox if not 'field_name-original' in x]
-        original_fields = [x for x in fields_from_multibox if not x in new_fields]
-        headers = ['field_name', 'field_type',
-                   'field_label', 'linked_table', 'field_order']
-
-
-        #get the original fields that have been altered
-        #this is so we don't lose data
-        original_fields_with_changes =[]
-        [original_fields_with_changes.append(
-            x) for x in original_fields for y in headers if not x[y] == x[y+'-original'] and x not in original_fields_with_changes]
-        
-       
-        if not [x for x in fields_needed_for_name_formula if x not in [y['field_name'] for y in fields_from_multibox]]==[]:
-            messagebox.showerror('Error', 'Missing fields that are in the name formula')
-            return 'Error'                        
-       
+        for one_field in fields_needed_for_name_formula:
+            if next((x for x in fields_from_multibox if x['field_name'] == one_field), None) == None:        
+                messagebox.showerror('Error', 'Missing fields that are in the name formula')
+                return 'Error'            
 
         if update_interface_info:
             self.Database_Obj.update_one_record(
                 'interfaces', record_ID, columns_to_update)
 
-        #add new fields
+        #check if there are new fields
+        
+
+        new_fields = []
+        fields_to_remove = []
+
+        for one_field in fields_from_multibox:
+            if not(one_field in self.current_interface_info):    
+                fields_to_remove = fields_to_remove + \
+                    [x for x in self.current_interface_info if x['field_name']
+                        == one_field['field_name']]
+                if not one_field['field_name'] == 'parent_id':
+                    new_fields.append(one_field)
+                    self.current_interface_info.append(one_field)
+
+        #check if fields were removed.
+        
+        for one_field in self.current_interface_info:
+            if next((x for x in fields_from_multibox if x['field_name'] == one_field['field_name']), None) == None:
+                #if not one_field['field_type']=='multi_linked_table':
+                fields_to_remove.append(one_field)
+
+        if not fields_to_remove == []:
+            if self.Database_Obj.remove_fields_interface(self.current_interface_name,
+                                                         self.current_table_name, fields_to_remove) == 'Error':
+                messagebox.showerror('Error', 'Error removing fields')
+                return 'Error'
+            else:
+                self.current_interface_info.remove(one_field)
+
         if not new_fields == []:
             if self.Database_Obj.add_new_fields_interface(self.current_interface_name,
                                                           self.current_table_name, new_fields) == 'Error':
@@ -886,34 +817,15 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
                     'Error', 'Error adding one of the new fields')
                 return 'Error'
 
-        #change altered fields
-        if not original_fields_with_changes == []:
-            if self.Database_Obj.alter_fields_interface(self.current_interface_name,
-                                                          self.current_table_name, original_fields_with_changes) == 'Error':
-                messagebox.showerror(
-                    'Error', 'Error adding one of the new fields')
-                return 'Error'
-
-        #remove fields
-        if not fields_to_remove == []:
-            if self.Database_Obj.remove_fields_interface(self.current_interface_name,
-                                                         self.current_table_name, fields_to_remove) == 'Error':
-                messagebox.showerror('Error', 'Error removing fields')
-                return 'Error'
-
         for one_multi_value in self.multi_value_frames:
             one_multi_value.set_parent_interface(interface_name, False)
             if type(one_multi_value).__name__== 'New_Interface_DLG_Class_For_Multi_Value':
                 one_multi_value.Add_Interface()
             else:
-                if not next(x for x in columns_to_update if x['column_name']=='interface_name')==None:
-                    one_multi_value.new_parent_interface_name(self.current_interface_name)
-
                 one_multi_value.Update_Interface()
             
         self.multi_value_frames=[]
         self.FieldList.clear_list_boxes()
-        self.winfo_toplevel().nametowidget('interface_admin').populate_interface_box()
         self.lower()
 
     def Cancel(self):
@@ -1063,30 +975,16 @@ class Alter_Interface_DLG_Class_For_Multi_Value(Alter_Interface_DLG_Class):
     def set_from(self, from_frame):
         self.from_frame = from_frame
 
-    def new_parent_interface_name(self, interface_name):
+    def set_parent_interface(self, interface_name, is_required):
+        self.is_required = is_required
+
         this_field = {}
         this_field['field_name'] = 'parent_id'
         this_field['field_type'] = 'linked_table'
         this_field['field_label'] = ''
         this_field['linked_table'] = interface_name
-        this_field['field_order']=0
-        this_field['field_name-original'] = 'parent_id'
-        this_field['field_type-original'] = 'linked_table'
-        this_field['field_label-original'] = ''
-        this_field['linked_table-original'] = ''
-        this_field['field_order-original'] = 0
-        self.FieldList.add_one_record(this_field)
-
-    def set_parent_interface(self, interface_name, is_required):
-        self.is_required = is_required
-
-        # this_field = {}
-        # this_field['field_name'] = 'parent_id'
-        # this_field['field_type'] = 'linked_table'
-        # this_field['field_label'] = ''
-        # this_field['linked_table'] = interface_name
         self.parent_interface = interface_name
-        #self.FieldList.add_one_record(this_field)
+        self.FieldList.add_one_record(this_field)
 
 class New_Interface_DLG_Class_For_Multi_Value(New_Interface_DLG_Class):
     def __init__(self, Database_Obj, *args, **kwargs):

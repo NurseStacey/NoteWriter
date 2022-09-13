@@ -1,6 +1,8 @@
 import mysql.connector
 from template import *
 from tkinter import messagebox
+
+
 class MyDatabaseClass():
 
     def __init__(self):
@@ -221,23 +223,6 @@ class MyDatabaseClass():
             
         return 'No_Error'
 
-    # def change_table_name_interface(self,interface, old_name, new_name):
-
-    #     if self.change_table_name(old_name, new_name)=='Error':
-    #         return 'Error'
-
-    #     _SQL = "UPDATE interfaces SET Table_Name ="  + chr(34) + \
-    #          new_name + chr(34) + " WHERE  = Table_Name" + chr(34) + old_name + chr(34) + " AND WHERE Interface_Name = "  + chr(34) + interface  + chr(34)
-        
-    #     try:
-    #         mycursor = self.get_cursor()
-    #         mycursor.execute(_SQL)
-    #     except mysql.connector.Error as err:
-    #         print("Something went wrong: {}".format(err))
-    #         return 'Error'
-
-    #     return 'No_Error'
-
     def change_table_name(self, old_name, new_name):
 
         _SQL = "ALTER TABLE  " + old_name + " RENAME TO " + new_name
@@ -274,13 +259,13 @@ class MyDatabaseClass():
         _SQL += ") VALUES ("  
 
         for index in range(len(field_type)):
-            if field_type[index] in [ 'string', 'text']:
+            if field_type[index] in [ 'string', 'text', 'phone']:
                 _SQL += chr(34)
                 _SQL +=field_data[index]
                 _SQL += chr(34)
             elif field_type[index] in ['date']:
                 _SQL += chr(34)
-                _SQL += field_data[index].strftime('%Y-%m-%d %H:%M:%S')
+                _SQL += field_data[index].strftime('%Y-%m-%d')
                 _SQL += chr(34)
             elif field_type[index] in ['double','integer', 'bool', 'linked_table']:
                 _SQL += str(field_data[index])
@@ -474,7 +459,7 @@ class MyDatabaseClass():
     def one_new_field_query_string(self, one_field):
 
         _SQL = ''
-        if one_field['field_type'] == 'string':
+        if one_field['field_type'] in ['phone','string']:
             _SQL += one_field['field_name']
             _SQL += ' VARCHAR(255)'
             # _SQL += str(one_field.length)
@@ -490,7 +475,7 @@ class MyDatabaseClass():
             _SQL += ' FLOAT(10,4), '
         elif one_field['field_type'] == 'date':
             _SQL += one_field['field_name']
-            _SQL += ' DATETIME, '
+            _SQL += ' DATE, '
         elif one_field['field_type'] == 'bool':
             _SQL += one_field['field_name']
             _SQL += ' BOOL, '
@@ -498,34 +483,6 @@ class MyDatabaseClass():
             _SQL += one_field['field_name']
             _SQL += ' int, '
         return _SQL
-
-    # def one_new_field_query_string(self, one_field):
-
-    #     _SQL = ''
-    #     if one_field.type == 'string':
-    #         _SQL += one_field.name
-    #         _SQL += ' VARCHAR(255)'
-    #         # _SQL += str(one_field.length)
-    #         _SQL += ', '
-    #     elif one_field.type == 'text':
-    #         _SQL += one_field.name
-    #         _SQL += ' MEDIUMTEXT, '
-    #     elif one_field.type == 'integer':
-    #         _SQL += one_field.name
-    #         _SQL += ' SMALLINT, '
-    #     elif one_field.type == 'double':
-    #         _SQL += one_field.name
-    #         _SQL += ' FLOAT(10,4), '
-    #     elif one_field.type == 'date':
-    #         _SQL += one_field.name
-    #         _SQL += ' DATETIME, '
-    #     elif one_field.type == 'bool':
-    #         _SQL += one_field.name
-    #         _SQL += ' BOOL, '
-    #     elif one_field.type == 'linked_table':
-    #         _SQL += one_field.name
-    #         _SQL += ' int, '
-    #     return _SQL
 
     def add_new_fields(self, table_name, new_fields):
 
@@ -556,7 +513,7 @@ class MyDatabaseClass():
             _SQL +=one_column['column_name'] 
             _SQL += ' = '
             
-            if one_column['type']=='string':
+            if one_column['type'] in ['phone','string']:
                 _SQL += chr(34)
                 _SQL +=one_column['value']
                 _SQL += chr(34)
@@ -569,7 +526,7 @@ class MyDatabaseClass():
         _SQL += ' WHERE '
         _SQL += record_ID['column_name']
         _SQL += ' = '
-        if record_ID['type'] == 'string':
+        if record_ID['type'] in ['phone','string']:
             _SQL += chr(34)
             _SQL += record_ID['value']
             _SQL += chr(34)
@@ -629,6 +586,93 @@ class MyDatabaseClass():
             return 'Error'
 
         return 'No_Error'
+
+    def alter_fields_interface(self, interface_name, table_name, altered_fields):
+        
+        field_data=[]
+
+        for one_field in altered_fields:
+
+            if not one_field['field_name-original']==one_field['field_name']:
+                _SQL = "ALTER TABLE " + table_name + " RENAME COLUMN " + one_field['field_name-orginal'] + ' TO ' + one_field['field_name']
+                try:
+                    mycursor = self.get_cursor()
+                    mycursor.execute(_SQL)
+                    self.the_db.commit()
+                except mysql.connector.Error as err:
+                    print("Something went wrong: {}".format(err))
+                    return 'Error'
+
+            if not one_field['field_type-original']==one_field['field_type']:
+                new_field_type = self.get_field_type_string(one_field['field_type'])
+
+                _SQL = "ALTER TABLE table_name MODIFY " + one_field['field_name'] + " " + new_field_type
+                try:
+                    mycursor = self.get_cursor()
+                    mycursor.execute(_SQL)
+                    self.the_db.commit()
+                except mysql.connector.Error as err:
+                    print("Something went wrong: {}".format(err))
+                    return 'Error'
+
+            _SQL = 'DELETE FROM interface_fields WHERE field_name= '
+            _SQL += chr(34)
+            _SQL += one_field['field_name']
+            _SQL += chr(34)
+
+            _SQL += 'AND interface_name= '
+            _SQL += chr(34)
+            _SQL += interface_name
+            _SQL += chr(34)
+
+            try:
+                mycursor = self.get_cursor()
+                mycursor.execute(_SQL)
+            except mysql.connector.Error as err:
+                print("Something went wrong: {}".format(err))
+                return 'Error'
+    
+            field_data.append((interface_name, 
+                            one_field['field_name'],
+                               one_field['field_label'],
+                               int(one_field['field_order']),
+                            one_field['field_type'],
+                            one_field['linked_table']))
+        
+        _SQL = "INSERT INTO interface_fields (interface_name, field_name, field_label, field_order, field_type, linked_table) VALUES (%s, %s, %s, %s, %s, %s)"
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.executemany(_SQL, field_data)
+            self.the_db.commit()
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+            
+    def get_field_type_string(self, field_type):
+
+        if field_type in ['phone','string']:
+            return ' VARCHAR(255)'
+            
+        elif field_type == 'text':
+            
+            return  ' MEDIUMTEXT, '
+        elif field_type == 'integer':
+           
+            return  ' SMALLINT, '
+        elif field_type == 'double':
+            
+            return ' FLOAT(10,4), '
+        elif field_type == 'date':
+            
+            return ' DATETIME, '
+        elif field_type == 'bool':
+            
+             return  ' BOOL, '
+        elif field_type in ['multi_linked_table', 'linked_table']:  
+             return  ' int, '
+
+        return 'error'
 
     def add_new_fields_interface(self, interface_name, table_name, new_fields):
 
@@ -694,6 +738,12 @@ class MyDatabaseClass():
             _SQL += chr(34)
             _SQL += one_field['field_name']
             _SQL += chr(34)
+
+            _SQL += 'AND interface_name= '
+            _SQL += chr(34)
+            _SQL += interface
+            _SQL += chr(34)
+
             try:
                 mycursor = self.get_cursor()
                 mycursor.execute(_SQL)
@@ -830,9 +880,6 @@ class MyDatabaseClass():
         _SQL += ' ORDER BY field_order'
 
         mycursor = self.get_cursor()
-        #mycursor = self.get_cursor(dictionary=True)
-        # mycursor = self.cursor(dictionary=True)
-        # mycursor = self.MySQLCursorDict()
         mycursor.execute(_SQL)
 
         records = mycursor.fetchall()
@@ -844,3 +891,28 @@ class MyDatabaseClass():
             return_value.append(dict(zip(columnNames, one_record)))
 
         return return_value
+
+    def get_one_record(self, table_name, record_ID):
+
+        _SQL = "SELECT * FROM " + table_name + " WHERE Record_ID=" + str(record_ID)
+
+        mycursor = self.get_cursor()
+        mycursor.execute(_SQL)
+
+        record = mycursor.fetchone()
+        columnNames = [column[0] for column in mycursor.description]
+
+        return dict(zip(columnNames, record))
+
+    def get_multi_linked_records(self, table_name, praent_id):
+
+        _SQL = "SELECT * FROM " + table_name + \
+            " WHERE parent_id=" + str(praent_id)
+
+        mycursor = self.get_cursor()
+        mycursor.execute(_SQL)
+
+        records = mycursor.fetchall()
+        columnNames = [column[0] for column in mycursor.description]
+
+        return [dict(zip(columnNames, one_record)) for one_record in records]

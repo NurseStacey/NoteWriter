@@ -190,14 +190,9 @@ class MyMultiListBox(tk.Frame):
 
         self.fields = fields
 
-        self.selection_mode_multi = False
-        self.which_last_sort = ''
-        self.direction_last_sort = -1
-
         self.number_columns = len(fields)
         self.list_boxes = []
         self.header_labels = []
-        #self.header_button = []
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -255,6 +250,10 @@ class MyMultiListBox(tk.Frame):
 
         self.single_click=None
 
+        self.the_data = []
+        self.last_selection = 0
+
+    #this is for changing position of an element
     def shift(self, which):
 
         selection = self.list_boxes[0].curselection()
@@ -279,6 +278,12 @@ class MyMultiListBox(tk.Frame):
         if which=='double_down':
             record_to_swap=  number_of_items - 1
 
+        first_data_item = next(x for x in self.the_data if x['field_order']==selection)
+        second_data_item = next(x for x in self.the_data if x['field_order'] == record_to_swap)
+
+        first_data_item['field_order']=record_to_swap
+        second_data_item['field_order']=selection
+
         item_one = []
         item_two = []
 
@@ -301,10 +306,9 @@ class MyMultiListBox(tk.Frame):
         for one_list_box in self.list_boxes:
             one_list_box.select_set(index)
 
-    def get_selection(self):
-        return self.list_boxes[0].curselection()[0]
-
     def set_state(self, the_state):
+        self.last_selection = self.get_selection()
+
         for one_box in self.list_boxes:
             one_box.config(state=the_state)
 
@@ -326,57 +330,11 @@ class MyMultiListBox(tk.Frame):
 
         for one_label in self.header_labels:
             one_label.config(font=this_font)
-        # for one_button in self.header_button:
-        #     one_button.config(font=this_font)
-
-    def get_widget(self, which):
-        return(self.listboxframe.nametowidget(which))
-
-    def clear_list_boxes(self):
-        for this_list_box in self.list_boxes:
-            this_list_box.delete(0, tk.END)
-
-    #this is to get only the first one selected
-    def get_current_selection_first(self, which):
-        return self.listboxframe.nametowidget(which).get(self.listboxframe.nametowidget(which).curselection()[0])
-
-    def current_selection_position(self):
-
-        return(self.list_boxes[0].curselction()[0])
-
-    def get_current_selection(self):
-        return_value = {}
-        field_names = []
-
-        for one_box in self.list_boxes:
-            return_value[one_box._name] = one_box.get(
-                one_box.curselection()[0])
-
-        return_value['order'] = self.list_boxes[0].curselection()[0]
-            # return_value.append(one_box.get(one_box.curselection()[0]))
-            # field_names.append(one_box._name)
-
-        return return_value
-        #return dict(zip(field_names,return_value))
-
-    # def get_current_selection_all(self, which):
-    #     selection_list = self.listboxframe.nametowidget(which).curselection()
-
-    #     return_value = []
-    #     for one_selection in selection_list:
-    #         return_value.append(self.listboxframe.nametowidget(which).get(one_selection))
-
-    #     return return_value
 
     def change_lable_text(self, labelname, newlabletext):
         this_label = self.listboxframe.nametowidget(labelname + 'label')
 
         this_label['text'] = newlabletext
-
-    def delete_one_item(self, which):
-
-        for temp in self.list_boxes:
-            temp.delete(which)
 
     def listboxclicked(self, event=None):
 
@@ -391,22 +349,12 @@ class MyMultiListBox(tk.Frame):
         if not self.single_click==None:
             self.single_click()
 
-    # #if you are to allow multiple lines to be selected
-    # def listboxclicked_multi(self, event=None):
-
-    #     all_selections = event.widget.curselection()
-    #     for temp in self.list_boxes:
-    #         temp.select_clear(0, tk.END)
-    #         for which in all_selections:
-    #             temp.select_set(which)
-
     def hide_column(self, which):
         self.listboxframe.nametowidget(which).grid_remove()
-        self.listboxframe.nametowidget(which + 'button').grid_remove()
+        self.listboxframe.nametowidget(which + 'label').grid_remove()
 
     def set_width(self, which, this_width):
         this_listbox = self.listboxframe.nametowidget(which)
-        #this_button = self.listboxframe.nametowidget(which+'button')
         this_button = self.listboxframe.nametowidget(which+'label')
         this_listbox.grid(row=this_listbox.this_row, column=this_listbox.this_column)
         this_listbox.configure(width=this_width)
@@ -429,6 +377,35 @@ class MyMultiListBox(tk.Frame):
         for this_listbox in self.list_boxes:
             this_listbox.yview_scroll(direction, "pages")
 
+    def numberitems(self):
+        return self.list_boxes[0].size()
+
+    def clear_list_boxes(self):
+        for this_list_box in self.list_boxes:
+            this_list_box.delete(0, tk.END)
+        
+        self.the_data = []
+            
+    def delete_one_item_from_box(self, which):
+        for temp in self.list_boxes:
+            temp.delete(which)
+
+    def delete_one_item(self, which):
+
+        self.delete_one_item_from_box(which)
+
+        item_to_delete = next(x for x in self.the_data if x['field_order']==which)
+        item_to_delete['field_order']=-1
+
+        for one_data_item in self.the_data:
+            if one_data_item['field_order'] > which:
+                one_data_item['field_order'] -= 1
+
+    def clear_all_selections(self):
+
+        for this_list_box in self.list_boxes:
+            this_list_box.selection_clear(0, tk.END)
+
     def get_item(self, which, index):
         temp = self.listboxframe.nametowidget(which)
         return temp.get(index)
@@ -436,20 +413,42 @@ class MyMultiListBox(tk.Frame):
     def value_in_list(self, which, value):
         return (value in self.listboxframe.nametowidget(which).get(0, tk.END))
 
-    def get_index(self, which, value):
-        return self.listboxframe.nametowidget(which).index(0, tk.END)
+    # def get_index(self, which, value):
+    #     return self.listboxframe.nametowidget(which).index(0, tk.END)
 
     def get_one_value_in_list(self, which, record):
         return (self.listboxframe.nametowidget(which).index(record))
 
     def get_all_records(self):
 
-        return_value = []
-        for which in range(self.numberitems()):
-            return_value.append(self.get_one_record(which))
+        return self.the_data
+        # return_value = []
+        # for which in range(self.numberitems()):
+        #     return_value.append(self.get_one_record(which))
 
-        return return_value
-        
+        # return return_value
+
+    def get_current_selection_this_column(self,which):
+        which_item = self.list_boxes[0].curselection()[0]
+
+        return (next(x[which] for x in self.the_data if x['field_order'] == which_item))
+
+    def get_current_selection(self):
+
+        which_item = self.list_boxes[0].curselection()[0]
+
+        return next(x for x in self.the_data if x['field_order'] == which_item)
+        # return_value = {}
+        # field_names = []
+
+        # for one_box in self.list_boxes:
+        #     return_value[one_box._name] = one_box.get(
+        #         one_box.curselection()[0])
+
+        # return_value['order'] = self.list_boxes[0].curselection()[0]
+
+        # return return_value
+
     def get_one_record(self, which):
         
         this_record = {}
@@ -466,31 +465,81 @@ class MyMultiListBox(tk.Frame):
         index = self.listboxframe.nametowidget(which).get(0, tk.END).index(value)
         self.delete_one_item(index)
 
+
     def get_values_in_column(self, which):
         return self.listboxframe.nametowidget(which).get(0, tk.END)
 
-    def add_one_record(self, record):
+    def get_current_selection_value(self, which):
+        return next(
+            x for x in self.the_data if x['field_order'] == self.get_selection())[which]
 
-        position=tk.END
-        if 'order' in record:
-            position=record['order']
 
+    def update_selected_record(self, record):
+        item_to_be_updated = next(
+            x for x in self.the_data if x['field_order'] == self.get_selection())
+
+        for key in record:
+            item_to_be_updated[key]=record[key]
+
+        self.delete_one_item_from_box(item_to_be_updated['field_order'])
+        self.insert_one_record_to_listboxes(
+            item_to_be_updated, item_to_be_updated['field_order'])
+
+    def insert_one_record_to_listboxes(self, record, where):
+        
         for one_box in self.list_boxes:
-            field_name = one_box._name
+            list_box_name = one_box._name
 
-            if field_name in record:
-                value = record[field_name]
+            if list_box_name in record:
+                value = record[list_box_name]
                 if isinstance(value, datetime.date):
                     text = value.strftime('%m/%d/%Y')
-                    one_box.insert(position, text)
+                    one_box.insert(where, text)
                 elif isinstance(value, bool):
                     if value:
-                        one_box.insert(position, 'Yes')
+                        one_box.insert(where, 'Yes')
                     else:
-                        one_box.insert(position, 'No')
+                        one_box.insert(where, 'No')
                 else:
-                    one_box.insert(position, value)
+                    one_box.insert(where, value)
 
+    def add_one_record(self, record):
+
+        one_data_item = {}
+        position=self.numberitems()
+        if 'field_order' in record:
+            position=record['field_order']
+
+        for key  in record:
+            one_data_item[key]=record[key]
+
+        one_data_item['field_order'] = position
+        self.the_data.append(one_data_item)
+
+        self.insert_one_record_to_listboxes(record, position)
+        # for one_box in self.list_boxes:
+        #     list_box_name = one_box._name
+            
+        #     if list_box_name in record:
+        #         value = record[list_box_name]
+        #         if isinstance(value, datetime.date):
+        #             text = value.strftime('%m/%d/%Y')
+        #             one_box.insert(position, text)
+        #         elif isinstance(value, bool):
+        #             if value:
+        #                 one_box.insert(position, 'Yes')
+        #             else:
+        #                 one_box.insert(position, 'No')
+        #         else:
+        #             one_box.insert(position, value)
+
+    def get_selection(self):
+        return self.list_boxes[0].curselection()[0]
+
+    def get_current_selection_which(self, which):
+        return self.listboxframe.nametowidget(which).get(self.listboxframe.nametowidget(which).curselection()[0])
+
+    #this moves the actual list boxes
     def change_position(self, which, whereto):
         swap = ""
 
@@ -510,63 +559,7 @@ class MyMultiListBox(tk.Frame):
         self.listboxframe.nametowidget(which + 'button').grid(row=this_row-1, column=whereto)
         self.listboxframe.nametowidget(swap + 'button').grid(row=this_row-1, column=fromwhere)
 
-    def numberitems(self):
-        return self.list_boxes[0].size()
 
-    # def sort(self, which):
-
-    #     direction = 1
-    #     if which == self.which_last_sort:
-    #         direction = -1 * self.direction_last_sort
-    #     else:
-    #         self.which_last_sort = which
-
-    #     self.direction_last_sort = direction
-
-    #     this_list_box = self.listboxframe.nametowidget(which)
-
-    #     number_of_items = self.numberitems()
-    #     temporary_records = []
-
-    #     for index in range(number_of_items):
-            
-    #         this_record = []
-    #         for attribute in dataclasses.fields(self.record_class):
-    #             this_record.append(
-    #                 self.listboxframe.nametowidget(attribute.name).get(index))
-
-    #         temporary_records.append(self.record_class(*this_record))
-
-    #     self.clear_list_boxes()
-
-    #     def sort_function(one_record):
-    #         nonlocal which
-    #         return getattr(one_record, which)
-
-    #     reverse_sort = not(self.direction_last_sort==1)
-
-    #     temporary_records.sort(key=sort_function, reverse=reverse_sort)
-
-    #     for one_record in temporary_records:
-    #         self.add_one_record(one_record)
-
-
-
-    # def set_selection_mode(self, which):
-
-    #     if which == tk.MULTIPLE:
-    #         self.selection_mode_multi = True
-    #         for one_list_box in self.list_boxes:
-    #             one_list_box.config(selectmode=which)
-    #             one_list_box.bind('<<ListboxSelect>>', self.listboxclicked_multi)
-    #     else:
-    #         for one_list_box in self.list_boxes:
-    #             one_list_box.config(selectmode=which)
-
-    def clear_all_selections(self):
-
-        for this_list_box in self.list_boxes:
-            this_list_box.selection_clear(0, tk.END)
 
 class MyButton(tk.Button):
     def __init__(self, font_size,  *args, **kwargs):
@@ -588,7 +581,8 @@ class MyEntry(tk.Frame):
         validate_type='key'
         validation_field_function=self.do_nothing
         this_is_date = False
-
+        this_is_phone = False
+        
         if 'validation_type' in kwargs:
             if kwargs['validation_type'] == 'DB_string':
                 validation_field_function = self.MySQL_Field_Name
@@ -601,7 +595,11 @@ class MyEntry(tk.Frame):
                 validation_field_function = self.only_integer  
             elif kwargs['validation_type'] == 'double':
                 validate_type='focusout'
-                validation_field_function = self.only_double      
+                validation_field_function = self.only_double  
+            elif kwargs['validation_type'] == 'phone':                
+                this_is_phone = True
+                validation_field_function = self.valid_phone
+                validate_type = 'focusout'                    
             elif kwargs['validation_type'] == 'date':                
                 this_is_date = True
                 validation_field_function = self.valid_date
@@ -626,17 +624,21 @@ class MyEntry(tk.Frame):
         if this_is_date:
             self.Entry_Box.bind('<KeyRelease>', self.only_date) 
             self.date_is_valid = False
+        elif this_is_phone:
+            self.Entry_Box.bind('<KeyRelease>', self.only_phone)
+            self.phone_is_valid = False
 
         self.allowed_charactors = [chr(i+ord('a')) for i in range(26)] +\
             ['_'] +\
             [chr(i+ord('0')) for i in range(10)]
-            # [chr(i+ord('A')) for i in range(26)] +\
 
 
-        #for date validation
-        
-    # def set_width(self, width):
-    #     self.Entry_Box.config(width=width)
+    def valid_phone(self, text):
+        if self.phone_is_valid or text=='':
+            return True
+        else:
+            messagebox.showerror('error', 'That is not a valid date. Either clear the box or fix the date.')
+            return False
 
     def valid_date(self, text):
 
@@ -645,6 +647,47 @@ class MyEntry(tk.Frame):
         else:
             messagebox.showerror('error', 'That is not a valid date. Either clear the box or fix the date.')
             return False
+
+    def only_phone(self, event):
+
+        if event.keycode==8:
+            return
+
+        self.phone_is_valid = False
+        text=self.Entry_Box.get()
+        if not event.char.isdigit():
+            text = text[0:len(text)-1]
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+
+        if len(text)==1:
+            text = '(' + text
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+            return
+        
+        if len(text)==4:
+            text = text + ') '
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+            return
+        
+        if len(text)==9:
+            text = text + '-'
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+            return
+
+        if len(text)==14:
+            self.phone_is_valid = True
+
+        if len(text)==15:
+            text = text[0:len(text)-1]
+            self.Entry_Box.delete(0, tk.END)
+            self.Entry_Box.insert(0, text)
+            self.phone_is_valid = True
+            return
+
 
     def only_date(self, event):
 
@@ -753,6 +796,7 @@ class MyEntry(tk.Frame):
             text = text[0:10]
             self.Entry_Box.delete(0, tk.END)
             self.Entry_Box.insert(0, text)
+            self.date_is_valid = True
 
 
     def only_double(self, text):
@@ -855,99 +899,6 @@ class MyFrame(tk.Frame):
     def Cancel(self):
         self.lower()
 
-class MyDropDownBox(tk.Frame):
-    def __init__(self, font_size, function_on_leave, *args, **kwargs):
-#, highlightbackground="blue", highlightthickness=2
-
-        # kwargs['validatecommand'] = (self.register(self.leave_widget), '%P')
-        # kwargs['validate'] = 'focusout'
-
-        super().__init__(*args, **kwargs)
-
-
-        self.entry_box = tk.Entry(self, font=font_return(
-            font_size), width=20, validate='focusout', validatecommand=(self.register(self.leave_widget),'%P'))
-
-        self.entry_box.grid(row=0, column=0, sticky='W')
-        self.entry_box.bind('<KeyRelease>', self.key_pressed)
-        self.list_box = ListScrollCombo(False, 5, 18, font_return(
-            font_size), self)
-
-        self.list_box.grid(row=1,column=0)
-
-        self.list_box_items = []
-        self.list_box.list_box_bind(self.list_box_selected)
-        self.grid_rowconfigure(2,weight=1)
-
-        self.current_selection = -1
-        self.function_on_leave = function_on_leave
-
-    def add_item(self, item):
-        self.list_box_items.append(item.lower())
-        self.list_box.add_item(item)
-
-    def add_item_list(self, item_list):
-        for one_item in item_list:
-            self.list_box_items.append(one_item.lower())
-            self.list_box.add_item(one_item)
-
-    def list_box_selected(self,e):
-        new_text = self.list_box.get_selected_text()
-        self.entry_box.delete(0, tk.END)
-        self.entry_box.insert(0, new_text[0])
-        self.entry_box.focus_set()
-
-    def leave_widget(self, value):
-        self.entry_box.delete(0, tk.END)
-        self.entry_box.insert(0,self.get_selection())   
-        if not self.function_on_leave==None:
-            self.function_on_leave()
-
-        return True  
-
-    def set_state(self, this_state):
-        self.entry_box.config(state=this_state)
-        self.list_box.set_state(this_state)
-
-    def key_pressed(self, e):
-        
-        current_text = self.entry_box.get().lower()
-
-        if e.keycode == 40:
-            self.current_selection += 1
-            self.list_box.selection_clear()
-            self.list_box.set_selection(self.current_selection)
-            return
-        
-        if e.keycode == 38:
-            self.current_selection -= 1
-            self.list_box.selection_clear()
-            self.list_box.set_selection(self.current_selection)
-            return
-            
-        self.add_list_box_items(current_text)
-
-    def clear_box(self):
-        self.entry_box.delete(0,tk.END)
-        self.add_list_box_items('')
-        self.list_box.selection_clear()
-
-    def add_list_box_items(self, text):
-        self.list_box.clear_listbox()
-        for x in self.list_box_items:
-            if x[:len(text)].lower() == text:
-                self.list_box.add_item(x)
-
-        self.current_selection = 0
-        self.list_box.selection_clear()
-        self.list_box.set_selection(self.current_selection)
-
-    def get_selection(self):
-
-        if len(self.list_box.get_selected_text())==0:
-            return ''
-
-        return self.list_box.get_selected_text()[0]
 
 class MyCheckBox(tk.Checkbutton):
     def __init__(self,  *args, **kwargs):
@@ -1125,6 +1076,10 @@ class ListScrollWithRecordID(ListScrollComboTwo):
         self.listbox.delete(ID)
         self.list_box_items.remove(item)        
 
+    def remove_all_items(self):
+        self.list_box_items=[]
+        self.listbox.delete(0, tk.END)
+        
     def update_displayed_list(self):
 
         self.listbox.delete(0, tk.END)
@@ -1136,14 +1091,16 @@ class ListScrollWithRecordID(ListScrollComboTwo):
         self.listbox.selection_clear(0, tk.END)
         self.listbox.selection_set(0)
 
+    def clear_selection(self):
+        self.listbox.selection_clear(0, tk.END)
+        
     def get_selected_ID(self):
 
         selections = self.listbox.curselection()
         if len(selections)==0:
             return self.listbox.get(0)
 
-        return [x['Record_ID'] for x in self.list_box_items if x['Name'] == self.listbox.get(selections[0])]
-
+        return next(x['Record_ID'] for x in self.list_box_items if x['Name'] == self.listbox.get(selections[0]))
 
 class ScrollingFrame(ttk.Frame):
     def __init__(self, *args, **kwargs):
@@ -1166,7 +1123,7 @@ class ScrollingFrame(ttk.Frame):
         self.canvas.create_window(
             (0, 0), width=1500, window=self.scrollable_frame, anchor="nw")
 
-        self.canvas.configure(yscrollcommand=self.scrollbar.set, height=600, width=500)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set, height=450, width=500)
 
         self.canvas.grid(row=0, column=0)
         self.scrollbar.grid(row=0, column=1, sticky='ns')
@@ -1187,3 +1144,98 @@ class ScrollingFrame(ttk.Frame):
     def get_inner_frame(self):
 
         return self.scrollable_frame
+
+
+# class MyDropDownBox(tk.Frame):
+#     def __init__(self, font_size, function_on_leave, *args, **kwargs):
+# #, highlightbackground="blue", highlightthickness=2
+
+#         # kwargs['validatecommand'] = (self.register(self.leave_widget), '%P')
+#         # kwargs['validate'] = 'focusout'
+
+#         super().__init__(*args, **kwargs)
+
+
+#         self.entry_box = tk.Entry(self, font=font_return(
+#             font_size), width=20, validate='focusout', validatecommand=(self.register(self.leave_widget),'%P'))
+
+#         self.entry_box.grid(row=0, column=0, sticky='W')
+#         self.entry_box.bind('<KeyRelease>', self.key_pressed)
+#         self.list_box = ListScrollCombo(False, 5, 18, font_return(
+#             font_size), self)
+
+#         self.list_box.grid(row=1,column=0)
+
+#         self.list_box_items = []
+#         self.list_box.list_box_bind(self.list_box_selected)
+#         self.grid_rowconfigure(2,weight=1)
+
+#         self.current_selection = -1
+#         self.function_on_leave = function_on_leave
+
+#     def add_item(self, item):
+#         self.list_box_items.append(item.lower())
+#         self.list_box.add_item(item)
+
+#     def add_item_list(self, item_list):
+#         for one_item in item_list:
+#             self.list_box_items.append(one_item.lower())
+#             self.list_box.add_item(one_item)
+
+#     def list_box_selected(self,e):
+#         new_text = self.list_box.get_selected_text()
+#         self.entry_box.delete(0, tk.END)
+#         self.entry_box.insert(0, new_text[0])
+#         self.entry_box.focus_set()
+
+#     def leave_widget(self, value):
+#         self.entry_box.delete(0, tk.END)
+#         self.entry_box.insert(0,self.get_selection())
+#         if not self.function_on_leave==None:
+#             self.function_on_leave()
+
+#         return True
+
+#     def set_state(self, this_state):
+#         self.entry_box.config(state=this_state)
+#         self.list_box.set_state(this_state)
+
+#     def key_pressed(self, e):
+
+#         current_text = self.entry_box.get().lower()
+
+#         if e.keycode == 40:
+#             self.current_selection += 1
+#             self.list_box.selection_clear()
+#             self.list_box.set_selection(self.current_selection)
+#             return
+
+#         if e.keycode == 38:
+#             self.current_selection -= 1
+#             self.list_box.selection_clear()
+#             self.list_box.set_selection(self.current_selection)
+#             return
+
+#         self.add_list_box_items(current_text)
+
+#     def clear_box(self):
+#         self.entry_box.delete(0,tk.END)
+#         self.add_list_box_items('')
+#         self.list_box.selection_clear()
+
+#     def add_list_box_items(self, text):
+#         self.list_box.clear_listbox()
+#         for x in self.list_box_items:
+#             if x[:len(text)].lower() == text:
+#                 self.list_box.add_item(x)
+
+#         self.current_selection = 0
+#         self.list_box.selection_clear()
+#         self.list_box.set_selection(self.current_selection)
+
+#     def get_selection(self):
+
+#         if len(self.list_box.get_selected_text())==0:
+#             return ''
+
+#         return self.list_box.get_selected_text()[0]

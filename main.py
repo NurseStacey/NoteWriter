@@ -50,10 +50,8 @@ Alter_Interface_DLG_Class(Database_Obj,
 Interface_Select_DLG_Class(Database_Obj,
                           The_Window, title_text='Select Interface', name='select_interface').grid(row=1, column=1, sticky='news')
 
-# InterfaceDLG_New_Record_Class(Database_Obj, The_Window,  name='interface_new_record_dlg').grid(
-#     row=1, column=1, sticky='news')
-InterfaceDLG_New_Record_Class(Database_Obj,
-                              The_Window, title_text='', name='interface_new_record_dlg').grid(row=1, column=1, sticky='news')
+InterfaceDLG_One_Record_Class(Database_Obj,
+                              The_Window, title_text='', name='interface_one_record_dlg').grid(row=1, column=1, sticky='news')
 
 InterfaceDLG_DoWhat_Class(Database_Obj,
                           The_Window, title_text='', name='interface_dlg').grid(row=1, column=1, sticky='news')

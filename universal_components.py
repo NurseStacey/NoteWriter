@@ -15,6 +15,7 @@ field_types = [
     "bool",
     "linked_table",
     "multi_linked_table",
+    'phone',
 ]
 field_types_with_linked_table = ['linked_table', 'multi_linked_table']
 field_types_without_linked_table = [
@@ -69,3 +70,10 @@ def dict1_in_dict2(dict1, dict2):
         elif not dict1[one_key] == dict2[one_key]:
             return False
     return True
+
+class All_Interface_Info_Class():
+    def __init__(self, interface_name, interface_structure, the_fields):
+        
+        self.interface_name = interface_name
+        self.interface_structure = interface_structure
+        self.the_fields = the_fields
