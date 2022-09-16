@@ -15,7 +15,7 @@ class Database_Admin_DLG_Class(MyFrame):
         MyButton(font_size,  self.button_frame, command=self.alter_table, text='Alter\nTable', height=3, width=10).grid(row=2,  padx=5, column=2)
         MyButton(font_size,  self.button_frame, text='Cancel', height=3, width=10, command=self.Cancel).grid(row=2, column=3, padx=5)
 
-        ListScrollComboTwo(10, 20, 25, None, self.button_frame,
+        ListScrollCombo(10, 20, 25, None, self.button_frame,
                            name='table_list_box').grid(row=1, column=1, pady=30, sticky='NW', rowspan=2)
         
         self.button_frame.nametowidget(
@@ -96,7 +96,7 @@ class New_Database_Table_DLG_Class(MyFrame):
         MyEntry(font_size,  self.input_frame, name='field_name',
                 validation_type='DB_string').grid(sticky='n', row=2, column=0, pady=(0, 10))
 
-        ListScrollComboTwo(5, 20, 20, None, self.input_frame, name='field_type').grid(
+        ListScrollCombo(5, 20, 20, None, self.input_frame, name='field_type').grid(
             sticky='n', row=2, column=1, pady=(0, 10))
 
         self.Required_checkbox_var = tk.IntVar()

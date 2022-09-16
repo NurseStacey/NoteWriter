@@ -21,7 +21,7 @@ class Interface_Admin_DLG_Class(MyFrame):
         MyButton(font_size,  self.button_frame, text='Cancel',
                  height=3, width=10, command=self.Cancel).grid(row=2, column=3, padx=5)
 
-        ListScrollComboTwo(10, 20, 25, None, self.button_frame,
+        ListScrollCombo(10, 20, 25, None, self.button_frame,
                         name='interface_list_box').grid(row=1, column=1, pady=30, rowspan=2)
 
         self.button_frame.nametowidget('interface_list_box').set_selection_mode('multiple')
@@ -241,10 +241,10 @@ class New_Interface_DLG_Class(MyFrame):
         MyEntry(font_size, self.input_frame, name='field_name',
                 validation_type='DB_string').grid(row=this_row, column=4,  columnspan=1, pady=(0, 10), sticky='N')
 
-        ListScrollComboTwo(5, 20, 20, None, self.input_frame, name='field_type').grid(
+        ListScrollCombo(5, 20, 20, None, self.input_frame, name='field_type').grid(
             row=this_row, column=5, columnspan=2,  rowspan=3, sticky='NW', pady=(0, 10), padx=10)
 
-        ListScrollComboTwo(5, 20, 20, None, self.input_frame,
+        ListScrollCombo(5, 20, 20, None, self.input_frame,
                            name='linked_table').grid(row=this_row,  rowspan=3, column=7, sticky='NW', pady=(0, 10), padx=10)
 
         self.input_frame.nametowidget('field_type').add_item_list(field_types)
@@ -536,7 +536,7 @@ class New_Interface_DLG_Class(MyFrame):
 
 
 
-        if field_type=='multi_list_box':
+        if field_type=='multi_linked_table':
 
             interface_list = self.Database_Obj.get_interface_names()
             if interface_list == 'Error':
@@ -580,9 +580,12 @@ class New_Interface_DLG_Class(MyFrame):
         original_field_name = self.FieldList.get_current_selection_value(
                 'field_name-original')
 
+
+
+        original_field_type = self.FieldList.get_current_selection_value(
+                'field_type-original')
+
         self.FieldList.update_selected_record(updated_field)
-
-
 
         self.reset_edit_field_button()
         self.reset_all_fields()
@@ -592,8 +595,7 @@ class New_Interface_DLG_Class(MyFrame):
         if field_type == 'multi_linked_table':
 
 
-
-            if original_field_name == '':
+            if not original_field_type == 'multi_linked_table':
                 new_frame = New_Interface_DLG_Class_For_Multi_Value(self.Database_Obj,
                                                                     self.winfo_toplevel(), title_text='Create Linked Interface', name=field_name)
                 new_frame.grid(row=1, column=1, sticky='news')
@@ -663,13 +665,9 @@ class New_Interface_DLG_Class(MyFrame):
         this_field['field_type'] = field_type
         this_field['field_label'] = field_label
         this_field['linked_table'] = linked_table
-#toad
-        # if 'order' in self.field_to_update:
-        #     this_field['order']=self.field_to_update['order']
 
         self.FieldList.add_one_record(this_field)
-#toad
-        # self.field_to_update = None
+
         self.input_frame.nametowidget('field_label').focus_set()
         
 
@@ -906,10 +904,14 @@ class Alter_Interface_DLG_Class(New_Interface_DLG_Class):
             if type(one_multi_value).__name__== 'New_Interface_DLG_Class_For_Multi_Value':
                 one_multi_value.Add_Interface()
             else:
-                if not next(x for x in columns_to_update if x['column_name']=='interface_name')==None:
-                    one_multi_value.new_parent_interface_name(self.current_interface_name)
+                one_multi_value.new_parent_interface_name(self.current_interface_name)
 
-                one_multi_value.Update_Interface()
+                one_multi_value.Update_Interface()                
+            # elif not columns_to_update==[]:
+            #     if not next(x for x in columns_to_update if x['column_name']=='interface_name')==None:
+            #         one_multi_value.new_parent_interface_name(self.current_interface_name)
+
+            #         one_multi_value.Update_Interface()
             
         self.multi_value_frames=[]
         self.FieldList.clear_list_boxes()
@@ -959,7 +961,7 @@ class BuildName_DLG_Class(tk.Toplevel):
         MyLabel(font_size, self, text='Build a Name for the Interface').grid(
             row=1, column=1, columnspan=2, pady=15)
 
-        ListScrollComboTwo(10, 20, 25, None, self,
+        ListScrollCombo(10, 20, 25, None, self,
                            name='field_list_box').grid(row=2, column=1, columnspan=2)
 
         self.nametowidget('field_list_box').add_item_list(field_names)

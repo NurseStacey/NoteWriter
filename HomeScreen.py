@@ -8,7 +8,7 @@ class HomeScreen_DLG_Class(MyFrame):
 
         super().__init__(Database_Obj, *args, **kwargs)
 
-        temp_listbox = ListScrollComboTwo(5, 20, 20, self.input_frame)
+        temp_listbox = ListScrollCombo(5, 20, 20, self.input_frame)
         temp_listbox.grid(row=1, column=1)
         fruit_list = []
         with open('fruit.txt', 'r') as this_file:

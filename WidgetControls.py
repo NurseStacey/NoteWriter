@@ -8,116 +8,116 @@ from universal_components import *
 from tkinter import messagebox
 from tkinter import ttk
 
-class ListScrollCombo(tk.Frame):
-    def __init__(self, show_forward_backward_buttons, this_height, this_width, this_font, *args, **kwargs):
+# class ListScrollCombo(tk.Frame):
+#     def __init__(self, show_forward_backward_buttons, this_height, this_width, this_font, *args, **kwargs):
 
-        super().__init__(*args, **kwargs)
-    # ensure a consistent GUI size
-        self.grid_propagate(False)
-    # implement stretchability
-        # self.grid_rowconfigure(0, weight=1)
-        # self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(5, weight=1)
-        self.grid_columnconfigure(4, weight=1)
+#         super().__init__(*args, **kwargs)
+#     # ensure a consistent GUI size
+#         self.grid_propagate(False)
+#     # implement stretchability
+#         # self.grid_rowconfigure(0, weight=1)
+#         # self.grid_columnconfigure(0, weight=1)
+#         self.grid_rowconfigure(5, weight=1)
+#         self.grid_columnconfigure(4, weight=1)
 
-        if show_forward_backward_buttons:
-            tk.Button(self, text='Backward ' + str(this_height), height=int(this_height/4), font=this_font,
-                      command=lambda: self.jump(-1)).grid(row=2, column=1, sticky='n')
+#         if show_forward_backward_buttons:
+#             tk.Button(self, text='Backward ' + str(this_height), height=int(this_height/4), font=this_font,
+#                       command=lambda: self.jump(-1)).grid(row=2, column=1, sticky='n')
 
-            tk.Button(self, text='Forward ' + str(this_height), height=int(this_height/4), font=this_font,
-                      command=lambda: self.jump(1)).grid(row=3, column=1, sticky='n')
+#             tk.Button(self, text='Forward ' + str(this_height), height=int(this_height/4), font=this_font,
+#                       command=lambda: self.jump(1)).grid(row=3, column=1, sticky='n')
 
-    # create a list widget
-        self.listbox = tk.Listbox(self, takefocus=False, name='list_box',
-                                  width=this_width, font=this_font, height=this_height, exportselection=0)
-        self.listbox.grid(row=1, column=2, rowspan=3,sticky="ne")
+#     # create a list widget
+#         self.listbox = tk.Listbox(self, takefocus=False, name='list_box',
+#                                   width=this_width, font=this_font, height=this_height, exportselection=0)
+#         self.listbox.grid(row=1, column=2, rowspan=3,sticky="ne")
 
-    # create a Scrollbar and associate it with txt
-        scrollb = ttk.Scrollbar(self,  takefocus=False,
-                                command=self.listbox.yview)
-        scrollb.grid(row=1, column=3, rowspan=3, sticky='ns')
-        self.listbox['yscrollcommand'] = scrollb.set
+#     # create a Scrollbar and associate it with txt
+#         scrollb = ttk.Scrollbar(self,  takefocus=False,
+#                                 command=self.listbox.yview)
+#         scrollb.grid(row=1, column=3, rowspan=3, sticky='ns')
+#         self.listbox['yscrollcommand'] = scrollb.set
 
-        self.config(width=(self.listbox.winfo_reqwidth()+scrollb.winfo_reqwidth()), height=(self.listbox.winfo_reqheight()+scrollb.winfo_reqheight()))
+#         self.config(width=(self.listbox.winfo_reqwidth()+scrollb.winfo_reqwidth()), height=(self.listbox.winfo_reqheight()+scrollb.winfo_reqheight()))
 
-    def do_nothing(self, event):
-        return True
+#     def do_nothing(self, event):
+#         return True
 
-    def list_box_bind(self, function):
-        self.listbox.bind('<Double-1>', function)
+#     def list_box_bind(self, function):
+#         self.listbox.bind('<Double-1>', function)
 
-    def jump(self, direction):
-        self.listbox.yview_scroll(direction, "pages")
+#     def jump(self, direction):
+#         self.listbox.yview_scroll(direction, "pages")
 
-    def get_listbox(self):
-        return self.nametowidget('list_box')
+#     def get_listbox(self):
+#         return self.nametowidget('list_box')
     
-    def remove_item(self, text):
+#     def remove_item(self, text):
 
-        ID = self.listbox.get(0, tk.END).index(text)
-        self.listbox.delete(ID)
+#         ID = self.listbox.get(0, tk.END).index(text)
+#         self.listbox.delete(ID)
         
-    def listboxclicked(self, event):
-        pass
+#     def listboxclicked(self, event):
+#         pass
 
-    def add_item(self, thistext):
-        self.listbox.insert(tk.END, thistext)
+#     def add_item(self, thistext):
+#         self.listbox.insert(tk.END, thistext)
 
-    def get_item(self, which):
-        return self.listbox.get(which)
+#     def get_item(self, which):
+#         return self.listbox.get(which)
 
-    def get_selected_text(self):
+#     def get_selected_text(self):
 
-        return_value = []
+#         return_value = []
 
-        this_array = self.getselections()
+#         this_array = self.getselections()
 
-        for index in this_array:
-            return_value.append(self.get_item(index))
+#         for index in this_array:
+#             return_value.append(self.get_item(index))
 
-        return return_value
+#         return return_value
 
 
-    def getselections(self):
-        return self.listbox.curselection()
+#     def getselections(self):
+#         return self.listbox.curselection()
 
-    def set_selection(self, index):
-        self.listbox.selection_set(index)
+#     def set_selection(self, index):
+#         self.listbox.selection_set(index)
 
-    def set_selected_items(self, item_list):
+#     def set_selected_items(self, item_list):
 
-        for index in range(self.listbox.size()):
-            if self.get_item(index) in item_list:
-                self.listbox.selection_set(index)
+#         for index in range(self.listbox.size()):
+#             if self.get_item(index) in item_list:
+#                 self.listbox.selection_set(index)
 
-    def set_selection_mode(self, which):
-        self.listbox.config(selectmode=which)
+#     def set_selection_mode(self, which):
+#         self.listbox.config(selectmode=which)
 
-    def clear_listbox(self):
-        self.listbox.delete(0, tk.END)
+#     def clear_listbox(self):
+#         self.listbox.delete(0, tk.END)
 
-    def selection_clear(self):
-        self.listbox.selection_clear(0, tk.END)
+#     def selection_clear(self):
+#         self.listbox.selection_clear(0, tk.END)
 
-    def get_all_items(self):
-        all_items = []
-        for index in range(self.listbox.size()):
-            all_items.append(self.listbox.get(index))
+#     def get_all_items(self):
+#         all_items = []
+#         for index in range(self.listbox.size()):
+#             all_items.append(self.listbox.get(index))
 
-        return all_items
+#         return all_items
 
-    def set_state(self, this_state):
-        self.listbox.configure(state=this_state)
+#     def set_state(self, this_state):
+#         self.listbox.configure(state=this_state)
 
-    def order_items(self):
+#     def order_items(self):
 
-        all_items = self.get_all_items()
+#         all_items = self.get_all_items()
 
-        all_items.sort()
-        self.clear_listbox()
+#         all_items.sort()
+#         self.clear_listbox()
 
-        for this_item in all_items:
-            self.add_item(this_item)
+#         for this_item in all_items:
+#             self.add_item(this_item)
 
 class TextScrollCombo(tk.Frame):
     def __init__(self, *args, **kwargs):
@@ -812,6 +812,9 @@ class MyEntry(tk.Frame):
 
     def only_integer(self, text):
         
+        if text=='':
+            return True
+
         try:
             int(text)
         except ValueError:
@@ -913,7 +916,7 @@ class FunctionOnSelect():
         self.function_call = function_call
         self.values = values
 
-class ListScrollComboTwo(tk.Frame):
+class ListScrollCombo(tk.Frame):
     def __init__(self, this_height, this_width, this_font, selection_made, *args, **kwargs):
 
 
@@ -1057,7 +1060,7 @@ class ListScrollComboTwo(tk.Frame):
         new_selection= self.listbox.get(0,tk.END).index(which)
         self.listbox.selection_set(new_selection)
 
-class ListScrollWithRecordID(ListScrollComboTwo):
+class ListScrollWithRecordID(ListScrollCombo):
     def __init__(self, this_height, this_width, this_font, selection_made, *args, **kwargs):
 
         super().__init__(this_height, this_width, this_font, selection_made, *args, **kwargs)

@@ -169,6 +169,19 @@ class MyDatabaseClass():
 
         results = mycursor.fetchall()
         return [item[0] for item in results]
+
+    def get_interface_names_parent_none(self):
+        _SQL = "SELECT DISTINCT interface_name, parent_interface from interfaces"
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+        results = mycursor.fetchall()
+        return [item[0] for item in results if item[1].strip()=='']
         
     def get_list_current_tables(self):
         _SQL = "SHOW TABLES"
@@ -606,7 +619,7 @@ class MyDatabaseClass():
             if not one_field['field_type-original']==one_field['field_type']:
                 new_field_type = self.get_field_type_string(one_field['field_type'])
 
-                _SQL = "ALTER TABLE table_name MODIFY " + one_field['field_name'] + " " + new_field_type
+                _SQL = "ALTER TABLE " + table_name + " MODIFY " + one_field['field_name'] + " " + new_field_type
                 try:
                     mycursor = self.get_cursor()
                     mycursor.execute(_SQL)
@@ -916,3 +929,83 @@ class MyDatabaseClass():
         columnNames = [column[0] for column in mycursor.description]
 
         return [dict(zip(columnNames, one_record)) for one_record in records]
+
+    def delete_record(self, interface_info, selected_record):
+        #I believe that this is more complicated than it needs to be
+
+        this_combo = {}
+        this_combo['parent_interface_name'] = None
+        this_combo['interface_name'] = interface_info.interface_name
+        this_combo['interface_table'] = interface_info.interface_structure['interface_table']
+
+        this_combo['record_ids'] = [selected_record]
+
+        multi_linked_tables = [this_combo]
+
+        these_interfaces = [this_combo]
+
+        while not these_interfaces == []:
+            sub_interfaces_this_layer = []
+            for one_interface in these_interfaces:
+                sub_interfaces = self.get_multi_linked_tables(
+                    one_interface['interface_name'])
+                for one_sub_interface in sub_interfaces:
+
+                    this_combo = {}
+                    this_combo['parent_interface_name'] = one_interface['interface_name']
+                    this_combo['interface_name'] = one_sub_interface['interface_name']
+                    this_combo['interface_table'] = one_sub_interface['interface_table']
+                    this_combo['record_ids'] = []
+
+                    multi_linked_tables.append(this_combo)
+
+                    sub_interfaces_this_layer.append(this_combo)
+
+            these_interfaces = sub_interfaces_this_layer
+
+        for one_interface in multi_linked_tables:
+            these_sub_interfaces = [
+                x for x in multi_linked_tables if x['parent_interface_name'] == one_interface['interface_name']]
+
+            for one_sub_interface in these_sub_interfaces:
+                for one_record_id in one_interface['record_ids']:
+                    these_records = self.get_multi_linked_records(
+                        one_sub_interface['interface_table'], one_record_id)
+
+                    one_sub_interface['record_ids'] = one_sub_interface['record_ids'] + [
+                        x['Record_ID'] for x in these_records]
+
+        for one_interface in reversed(multi_linked_tables):
+            for one_record_id in one_interface['record_ids']:
+                self.delete_one_record(
+                    one_interface['interface_table'], one_record_id)
+
+    def delete_one_record(self,table_name, record_id):
+        _SQL = 'DELETE FROM ' + table_name + ' WHERE Record_ID = ' + str(record_id)
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+            self.the_db.commit()
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+
+    def get_multi_linked_tables(self, interface_name):
+
+        _SQL = 'SELECT interface_name, interface_table FROM interfaces WHERE parent_interface= '
+        _SQL += chr(34)
+        _SQL += interface_name
+        _SQL += chr(34)
+
+        try:
+            mycursor = self.get_cursor()
+            mycursor.execute(_SQL)
+            interfaces = mycursor.fetchall()
+        except mysql.connector.Error as err:
+            print("Something went wrong: {}".format(err))
+            return 'Error'
+        
+        columnNames = [column[0] for column in mycursor.description]
+
+        return [dict(zip(columnNames, one_record)) for one_record in interfaces]

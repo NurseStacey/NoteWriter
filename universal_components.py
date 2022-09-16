@@ -20,7 +20,9 @@ field_types = [
 field_types_with_linked_table = ['linked_table', 'multi_linked_table']
 field_types_without_linked_table = [
     x for x in field_types if x not in field_types_with_linked_table]
-    
+
+fields_to_skip_in_interface = ['multi_linked_table', 'MV_buttons', 'title']
+
 def font_return(this_size):
     return tkfont.Font(family="Arial", size=this_size)
 
@@ -71,6 +73,9 @@ def dict1_in_dict2(dict1, dict2):
             return False
     return True
 
+def Sort_By_Order(e):
+    return e['field_order']
+    
 class All_Interface_Info_Class():
     def __init__(self, interface_name, interface_structure, the_fields):
         
